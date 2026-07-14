@@ -9,7 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c5bf5'/><stop offset='100%25' stop-color='%23f55b9a'/></linearGradient></defs><circle cx='50' cy='50' r='45' fill='url(%23g)'/><path d='M30 65 Q40 30 50 55 Q60 30 70 65' stroke='white' stroke-width='4' fill='none'/></svg>">
+  <link rel="manifest" href="manifest.json">
   <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -413,6 +415,157 @@
       box-shadow: 0 0 12px rgba(245, 200, 91, 0.15);
     }
 
+    /* ── AUTH CONTAINER & BUTTONS ── */
+    #auth-container {
+      position: fixed;
+      top: 1rem; right: 12rem;
+      z-index: 201;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      pointer-events: auto;
+    }
+    .auth-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .auth-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent-1);
+      box-shadow: 0 0 10px rgba(124, 91, 245, 0.2);
+    }
+    .user-email {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── PWA INSTALL BUTTON ── */
+    #pwa-install-btn {
+      background: rgba(91, 245, 200, 0.1);
+      border: 1px solid var(--accent-3);
+      color: var(--accent-3);
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: none;
+    }
+    #pwa-install-btn:hover {
+      background: rgba(91, 245, 200, 0.2);
+      box-shadow: 0 0 10px rgba(91, 245, 200, 0.3);
+    }
+
+    /* ── MODALS (General/Auth) ── */
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(6, 6, 14, 0.85);
+      backdrop-filter: blur(15px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: rgba(12, 12, 26, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(124, 91, 245, 0.1);
+    }
+    .close-modal {
+      position: absolute;
+      top: 1rem; right: 1.2rem;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+    .close-modal:hover {
+      color: var(--text-primary);
+    }
+    .modal-content h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+    .modal-content form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .modal-content input {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      padding: 0.8rem;
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    .modal-content input:focus {
+      border-color: var(--accent-1);
+      background: rgba(255, 255, 255, 0.04);
+      box-shadow: 0 0 8px rgba(124, 91, 245, 0.15);
+    }
+    .modal-content button[type="submit"] {
+      background: var(--accent-1);
+      border: none;
+      color: #fff;
+      padding: 0.8rem;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .modal-content button[type="submit"]:hover {
+      opacity: 0.9;
+      box-shadow: 0 0 15px rgba(124, 91, 245, 0.4);
+    }
+    .auth-toggle-text {
+      margin-top: 1.2rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+    .auth-toggle-text span {
+      color: var(--accent-1);
+    }
+    .auth-error {
+      color: var(--accent-2);
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+
     /* ── PAYWALL MODAL ── */
     #paywall {
       position: fixed;
@@ -611,6 +764,14 @@
   <div class="session-timer-bar" id="session-timer-bar" style="width: 0%"></div>
   <div class="timer-label" id="timer-label"></div>
   <div class="premium-badge free" id="premium-badge">Free</div>
+  
+  <!-- Auth & PWA Installation Container -->
+  <div id="auth-container">
+    <button id="pwa-install-btn">Install App</button>
+    <span class="user-email" id="user-email" style="display: none;"></span>
+    <button class="auth-btn" id="auth-btn">Login / Sign Up</button>
+  </div>
+  
   <div class="rec-indicator" id="rec-indicator"><div class="rec-dot"></div>Recording</div>
   <button id="export-btn">Export Session</button>
 
@@ -625,7 +786,7 @@
   <div id="paywall">
     <div class="paywall-card">
       <h2>Your session ended</h2>
-      <p class="subtitle">You just created 2 minutes of unique music. Imagine what an hour sounds like.</p>
+      <p class="subtitle">You just created 10 minutes of unique music. Imagine what an hour sounds like.</p>
       <ul class="paywall-features">
         <li>
           <div class="paywall-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
@@ -653,6 +814,26 @@
       <button id="upgrade-btn">Unlock Premium</button>
       <br>
       <button class="paywall-dismiss" id="paywall-dismiss">Try another free session</button>
+      <p class="paywall-signin-text" style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary); text-align: center;">
+        Already subscribed? <span id="paywall-signin-link" style="color: var(--accent-1); cursor: pointer; text-decoration: underline;">Sign in to your account</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div id="auth-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" id="close-auth-modal">&times;</span>
+      <h3 id="auth-modal-title">Sign In</h3>
+      <form id="auth-form">
+        <input type="email" id="auth-email" placeholder="Email" required />
+        <input type="password" id="auth-password" placeholder="Password" required />
+        <button type="submit" id="auth-submit-btn">Sign In</button>
+      </form>
+      <div id="auth-error" class="auth-error" style="display: none;"></div>
+      <p class="auth-toggle-text">
+        Don't have an account? <span id="toggle-auth-mode" style="cursor:pointer; text-decoration:underline;">Sign Up</span>
+      </p>
     </div>
   </div>
 
@@ -1333,7 +1514,7 @@
     }
 
     // ─── PREMIUM / FREEMIUM ENGINE ─────────────────────────
-    const FREE_SESSION_SECONDS = 120; // 2 minutes
+    const FREE_SESSION_SECONDS = 600; // 10 minutes (600 seconds)
     const FREE_MOODS = ['calm', 'flowing', 'focused']; // Free tier: 3 moods
     let isPremium = false;
     let sessionTimerInterval = null;
@@ -1341,7 +1522,6 @@
     let recordedChunks = [];
 
     // ── Stripe config ──
-    // IMPORTANT: Replace with your real Stripe publishable key and price ID
     const STRIPE_CONFIG = {
       publishableKey: 'pk_live_YOUR_STRIPE_PUBLISHABLE_KEY',
       priceId: 'price_YOUR_STRIPE_PRICE_ID',
@@ -1349,28 +1529,74 @@
       cancelUrl: window.location.origin + '/app.html',
     };
 
-    function checkPremiumStatus() {
-      // Check URL params (returning from Stripe)
+    // ── Supabase config ──
+    const SUPABASE_CONFIG = {
+      url: 'https://YOUR_SUPABASE_URL.supabase.co',
+      anonKey: 'YOUR_SUPABASE_ANON_KEY'
+    };
+    
+    const supabase = (typeof window.supabase !== 'undefined') 
+      ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey) 
+      : null;
+
+    async function checkPremiumStatus() {
+      // Fallback URL param logic
       const params = new URLSearchParams(window.location.search);
       if (params.get('premium') === 'activated') {
         localStorage.setItem('lifesynth_premium', 'true');
         localStorage.setItem('lifesynth_premium_date', new Date().toISOString());
-        // Clean URL
         window.history.replaceState({}, '', window.location.pathname);
       }
+      
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await syncPremiumStatus(session.user.id);
+          return;
+        }
+      }
+      
       isPremium = localStorage.getItem('lifesynth_premium') === 'true';
+      updatePremiumUI();
+    }
+
+    async function syncPremiumStatus(userId) {
+      if (!supabase) return;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('is_premium')
+          .eq('id', userId)
+          .single();
+
+        if (error) throw error;
+        if (data) {
+          isPremium = data.is_premium;
+          localStorage.setItem('lifesynth_premium', isPremium ? 'true' : 'false');
+        }
+      } catch (err) {
+        console.error('Error syncing profile status:', err.message);
+        isPremium = localStorage.getItem('lifesynth_premium') === 'true';
+      }
       updatePremiumUI();
     }
 
     function updatePremiumUI() {
       const badge = document.getElementById('premium-badge');
+      const installBtn = document.getElementById('pwa-install-btn');
+      
       if (isPremium) {
         badge.textContent = 'Premium';
         badge.className = 'premium-badge pro';
         document.getElementById('export-btn').classList.add('visible');
+        if (deferredInstallPrompt) {
+          installBtn.style.display = 'block';
+        }
       } else {
         badge.textContent = 'Free';
         badge.className = 'premium-badge free';
+        document.getElementById('export-btn').classList.remove('visible');
+        installBtn.style.display = 'none';
       }
     }
 
@@ -1423,9 +1649,19 @@
       }, 1000);
     }
 
-    function handleUpgrade() {
-      // Redirect to Stripe Payment Link
-      window.location.href = 'https://buy.stripe.com/fZu3cocXU7ziacU35j1sQ00';
+    async function handleUpgrade() {
+      let checkoutUrl = 'https://buy.stripe.com/fZu3cocXU7ziacU35j1sQ00';
+      if (supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+        if (user) {
+          const urlObj = new URL(checkoutUrl);
+          urlObj.searchParams.set('client_reference_id', user.id);
+          urlObj.searchParams.set('prefilled_email', user.email);
+          checkoutUrl = urlObj.toString();
+        }
+      }
+      window.location.href = checkoutUrl;
     }
 
     function activateDemoPremium() {
@@ -1590,6 +1826,146 @@
     // Prevent default behaviors on textarea
     document.getElementById('type-capture').addEventListener('keydown', (e) => {
       if (e.key === 'Tab') e.preventDefault();
+    });
+
+    // ─── AUTH MODAL UI EVENT HANDLERS ───
+    const authModal = document.getElementById('auth-modal');
+    const authBtn = document.getElementById('auth-btn');
+    const closeAuthModalBtn = document.getElementById('close-auth-modal');
+    const toggleAuthModeSpan = document.getElementById('toggle-auth-mode');
+    const authForm = document.getElementById('auth-form');
+    const authError = document.getElementById('auth-error');
+
+    function openAuthModal() {
+      authError.style.display = 'none';
+      authForm.reset();
+      authModal.style.display = 'flex';
+      requestAnimationFrame(() => authModal.classList.add('show'));
+    }
+
+    function closeAuthModal() {
+      authModal.classList.remove('show');
+      setTimeout(() => authModal.style.display = 'none', 300);
+    }
+
+    authBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (authBtn.textContent === 'Logout') {
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
+      } else {
+        openAuthModal();
+      }
+    });
+
+    closeAuthModalBtn.addEventListener('click', closeAuthModal);
+    document.getElementById('paywall-signin-link')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAuthModal();
+    });
+
+    toggleAuthModeSpan.addEventListener('click', () => {
+      const title = document.getElementById('auth-modal-title');
+      const submitBtn = document.getElementById('auth-submit-btn');
+      if (submitBtn.textContent === 'Sign In') {
+        title.textContent = 'Sign Up';
+        submitBtn.textContent = 'Sign Up';
+        toggleAuthModeSpan.textContent = 'Sign In';
+        document.querySelector('.auth-toggle-text').childNodes[0].textContent = 'Already have an account? ';
+      } else {
+        title.textContent = 'Sign In';
+        submitBtn.textContent = 'Sign In';
+        toggleAuthModeSpan.textContent = 'Sign Up';
+        document.querySelector('.auth-toggle-text').childNodes[0].textContent = "Don't have an account? ";
+      }
+    });
+
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+      const submitBtn = document.getElementById('auth-submit-btn');
+      const isSignUp = submitBtn.textContent === 'Sign Up';
+      authError.style.display = 'none';
+
+      if (!supabase) {
+        authError.textContent = 'Authentication service is currently unavailable.';
+        authError.style.display = 'block';
+        return;
+      }
+
+      try {
+        if (isSignUp) {
+          const { data, error } = await supabase.auth.signUp({ email, password });
+          if (error) throw error;
+          alert('Registration successful! Please check your email for the confirmation link.');
+          closeAuthModal();
+        } else {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          closeAuthModal();
+        }
+      } catch (err) {
+        authError.textContent = err.message;
+        authError.style.display = 'block';
+      }
+    });
+
+    // ─── SUPABASE AUTH STATE LISTENER ───
+    if (supabase) {
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        const user = session?.user;
+        const emailSpan = document.getElementById('user-email');
+        if (user) {
+          emailSpan.textContent = user.email;
+          emailSpan.style.display = 'inline';
+          authBtn.textContent = 'Logout';
+          await syncPremiumStatus(user.id);
+        } else {
+          emailSpan.style.display = 'none';
+          authBtn.textContent = 'Login / Sign Up';
+          isPremium = false;
+          localStorage.setItem('lifesynth_premium', 'false');
+          updatePremiumUI();
+        }
+      });
+    }
+
+    // ─── PWA & OFFLINE SERVICE WORKER REGISTRATION ───
+    let deferredInstallPrompt = null;
+    const installBtn = document.getElementById('pwa-install-btn');
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then((reg) => console.log('Service Worker registered successfully:', reg.scope))
+          .catch((err) => console.error('Service Worker registration failed:', err));
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      if (isPremium) {
+        installBtn.style.display = 'block';
+      }
+    });
+
+    installBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      console.log(`PWA install prompt outcome: ${outcome}`);
+      deferredInstallPrompt = null;
+      installBtn.style.display = 'none';
+    });
+
+    window.addEventListener('appinstalled', () => {
+      console.log('Life Synth PWA was successfully installed.');
+      deferredInstallPrompt = null;
+      installBtn.style.display = 'none';
     });
 
     // Initial premium check
