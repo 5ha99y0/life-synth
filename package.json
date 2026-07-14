@@ -1,0 +1,10 @@
+{
+  "name": "life-synth",
+  "version": "1.0.0",
+  "description": "Your digital behavior becomes a living, evolving musical composition",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static site - no build needed'"
+  }
+}

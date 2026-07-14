@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Life Synth - Your digital behavior becomes a living, evolving musical composition in real-time.">
+  <title>Life Synth — Your Life as Music</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c5bf5'/><stop offset='100%25' stop-color='%23f55b9a'/></linearGradient></defs><circle cx='50' cy='50' r='45' fill='url(%23g)'/><path d='M30 65 Q40 30 50 55 Q60 30 70 65' stroke='white' stroke-width='4' fill='none'/></svg>">
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #06060e;
+      --bg-secondary: #0c0c1a;
+      --surface: rgba(255, 255, 255, 0.03);
+      --surface-hover: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.06);
+      --text-primary: #e8e6f0;
+      --text-secondary: rgba(232, 230, 240, 0.5);
+      --text-dim: rgba(232, 230, 240, 0.25);
+      --accent-1: #7c5bf5;
+      --accent-2: #f55b9a;
+      --accent-3: #5bf5c8;
+      --accent-4: #f5c85b;
+      --glow-purple: rgba(124, 91, 245, 0.3);
+      --glow-pink: rgba(245, 91, 154, 0.3);
+      --glow-green: rgba(91, 245, 200, 0.3);
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      cursor: none;
+    }
+
+    /* Custom cursor */
+    #cursor {
+      position: fixed;
+      width: 20px; height: 20px;
+      border: 2px solid var(--accent-1);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      transition: transform 0.1s ease, border-color 0.3s ease, width 0.2s ease, height 0.2s ease;
+      transform: translate(-50%, -50%);
+      mix-blend-mode: difference;
+    }
+    #cursor.active {
+      transform: translate(-50%, -50%) scale(0.6);
+      background: var(--accent-2);
+      border-color: var(--accent-2);
+    }
+    #cursor-trail {
+      position: fixed;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      background: radial-gradient(circle, var(--glow-purple), transparent 70%);
+      transform: translate(-50%, -50%);
+      transition: left 0.3s ease, top 0.3s ease, opacity 0.3s ease;
+      opacity: 0.5;
+    }
+
+    /* Canvas */
+    #visualizer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    /* Overlay gradient */
+    .overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: radial-gradient(ellipse at 50% 0%, transparent 40%, var(--bg-primary) 80%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Intro screen */
+    #intro {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-primary);
+      transition: opacity 1s ease, transform 1s ease;
+    }
+    #intro.hidden {
+      opacity: 0;
+      transform: scale(1.05);
+      pointer-events: none;
+    }
+    #intro h1 {
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 200;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 4s ease-in-out infinite alternate;
+    }
+    @keyframes shimmer {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(30deg); }
+    }
+    #intro p {
+      margin-top: 1.5rem;
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+      letter-spacing: 0.1em;
+    }
+    #start-btn {
+      margin-top: 3rem;
+      padding: 1rem 3rem;
+      background: transparent;
+      border: 1px solid var(--accent-1);
+      color: var(--accent-1);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: none;
+      border-radius: 60px;
+      transition: all 0.4s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    #start-btn::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 0; height: 0;
+      background: var(--accent-1);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.6s ease, height 0.6s ease;
+      z-index: -1;
+    }
+    #start-btn:hover {
+      color: var(--bg-primary);
+      border-color: var(--accent-1);
+    }
+    #start-btn:hover::before {
+      width: 400px;
+      height: 400px;
+    }
+
+    /* HUD */
+    #hud {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1s ease 0.5s;
+    }
+    #hud.visible { opacity: 1; }
+
+    /* Top bar */
+    .top-bar {
+      position: absolute;
+      top: 2rem; left: 2rem; right: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .logo {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .logo span {
+      color: var(--accent-1);
+    }
+    .time-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-align: right;
+      line-height: 1.6;
+    }
+
+    /* Behavior meters */
+    .meters {
+      position: absolute;
+      left: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .meter {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .meter-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      width: 60px;
+      text-align: right;
+    }
+    .meter-bar {
+      width: 120px;
+      height: 3px;
+      background: var(--surface);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .meter-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    .meter-fill.velocity { background: var(--accent-1); box-shadow: 0 0 10px var(--glow-purple); }
+    .meter-fill.rhythm { background: var(--accent-2); box-shadow: 0 0 10px var(--glow-pink); }
+    .meter-fill.energy { background: var(--accent-3); box-shadow: 0 0 10px var(--glow-green); }
+    .meter-fill.chaos { background: var(--accent-4); box-shadow: 0 0 8px rgba(245, 200, 91, 0.3); }
+    .meter-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      width: 30px;
+    }
+
+    /* Current mood / genre */
+    .mood-display {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+    .mood-genre {
+      font-size: 0.65rem;
+      font-weight: 300;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+    }
+    .mood-name {
+      font-size: 1.8rem;
+      font-weight: 200;
+      letter-spacing: 0.15em;
+      transition: color 0.8s ease;
+    }
+
+    /* Right panel - note history */
+    .note-history {
+      position: absolute;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      align-items: flex-end;
+    }
+    .note-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      opacity: 0;
+      animation: fadeInDot 0.3s ease forwards;
+      transition: background 0.3s ease;
+    }
+    @keyframes fadeInDot {
+      from { opacity: 0; transform: translateX(10px); }
+      to { opacity: 0.7; transform: translateX(0); }
+    }
+
+    /* Session stats */
+    .session-stats {
+      position: absolute;
+      bottom: 2rem;
+      right: 2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      text-align: right;
+      line-height: 1.8;
+    }
+
+    /* Typing area (invisible) */
+    #type-capture {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 5;
+      opacity: 0;
+      cursor: none;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: transparent;
+      font-size: 16px;
+      resize: none;
+    }
+
+    /* Key flash */
+    .key-flash {
+      position: fixed;
+      pointer-events: none;
+      z-index: 50;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 300;
+      color: var(--accent-1);
+      opacity: 0;
+      animation: keyFlashAnim 0.8s ease forwards;
+    }
+    @keyframes keyFlashAnim {
+      0% { opacity: 0.8; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+    }
+
+    /* Minimal scrollbar */
+    ::-webkit-scrollbar { display: none; }
+
+    /* Waveform hint at bottom */
+    .waveform-hint {
+      position: absolute;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 30px;
+    }
+    .waveform-bar {
+      width: 3px;
+      background: var(--accent-1);
+      border-radius: 2px;
+      transition: height 0.15s ease;
+      opacity: 0.4;
+    }
+
+    /* ── FREE TIER TIMER ── */
+    .session-timer-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+      z-index: 200;
+      transition: width 0.5s linear;
+      box-shadow: 0 0 12px var(--glow-purple);
+    }
+    .timer-label {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      z-index: 201;
+      letter-spacing: 0.1em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .timer-label.visible { opacity: 1; }
+
+    /* ── PREMIUM BADGE ── */
+    .premium-badge {
+      position: fixed;
+      top: 1rem; right: 6rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      z-index: 201;
+      pointer-events: none;
+    }
+    .premium-badge.free {
+      border: 1px solid var(--text-dim);
+      color: var(--text-dim);
+    }
+    .premium-badge.pro {
+      border: 1px solid var(--accent-4);
+      color: var(--accent-4);
+      box-shadow: 0 0 12px rgba(245, 200, 91, 0.15);
+    }
+
+    /* ── PAYWALL MODAL ── */
+    #paywall {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(6, 6, 14, 0.92);
+      backdrop-filter: blur(20px);
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    #paywall.show {
+      display: flex;
+      opacity: 1;
+    }
+    .paywall-card {
+      background: linear-gradient(135deg, rgba(124, 91, 245, 0.08), rgba(245, 91, 154, 0.05));
+      border: 1px solid rgba(124, 91, 245, 0.2);
+      border-radius: 24px;
+      padding: 3rem;
+      max-width: 460px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .paywall-card::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle at 30% 20%, rgba(124, 91, 245, 0.06), transparent 50%);
+      pointer-events: none;
+    }
+    .paywall-card h2 {
+      font-size: 1.8rem;
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .paywall-card .subtitle {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 300;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+    .paywall-features {
+      text-align: left;
+      margin-bottom: 2rem;
+      list-style: none;
+    }
+    .paywall-features li {
+      padding: 0.5rem 0;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      font-weight: 300;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .paywall-features li:last-child { border-bottom: none; }
+    .paywall-check {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .paywall-check svg {
+      width: 10px; height: 10px;
+      stroke: var(--bg-primary);
+      stroke-width: 3;
+      fill: none;
+    }
+    .paywall-price {
+      font-size: 2.5rem;
+      font-weight: 200;
+      margin-bottom: 0.25rem;
+    }
+    .paywall-price span {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+    .paywall-period {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 1.5rem;
+    }
+    #upgrade-btn {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+    #upgrade-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(124, 91, 245, 0.35);
+    }
+    .paywall-dismiss {
+      margin-top: 1rem;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+    .paywall-dismiss:hover { color: var(--text-secondary); }
+
+    /* ── RECORDING INDICATOR ── */
+    .rec-indicator {
+      position: fixed;
+      top: 1rem; left: 50%;
+      transform: translateX(-50%);
+      padding: 0.35rem 1rem;
+      border-radius: 20px;
+      background: rgba(245, 91, 91, 0.15);
+      border: 1px solid rgba(245, 91, 91, 0.3);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: #f55b5b;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      z-index: 201;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      pointer-events: none;
+    }
+    .rec-dot {
+      width: 6px; height: 6px;
+      background: #f55b5b;
+      border-radius: 50%;
+      animation: recPulse 1s ease-in-out infinite;
+    }
+    @keyframes recPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .rec-indicator.active { display: flex; }
+
+    /* ── EXPORT BUTTON (premium) ── */
+    #export-btn {
+      position: fixed;
+      bottom: 2rem; left: 2rem;
+      padding: 0.5rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      z-index: 15;
+      transition: all 0.3s ease;
+      display: none;
+    }
+    #export-btn:hover {
+      border-color: var(--accent-1);
+      color: var(--accent-1);
+      box-shadow: 0 0 15px rgba(124, 91, 245, 0.15);
+    }
+    #export-btn.visible { display: block; }
+  </style>
+</head>
+<body>
+  <div id="cursor"></div>
+  <div id="cursor-trail"></div>
+  <canvas id="visualizer"></canvas>
+  <div class="overlay"></div>
+
+  <!-- Session timer bar (free tier) -->
+  <div class="session-timer-bar" id="session-timer-bar" style="width: 0%"></div>
+  <div class="timer-label" id="timer-label"></div>
+  <div class="premium-badge free" id="premium-badge">Free</div>
+  <div class="rec-indicator" id="rec-indicator"><div class="rec-dot"></div>Recording</div>
+  <button id="export-btn">Export Session</button>
+
+  <!-- Intro -->
+  <div id="intro">
+    <h1>Life Synth</h1>
+    <p>your digital behavior, composed in real-time</p>
+    <button id="start-btn">Begin Listening</button>
+  </div>
+
+  <!-- Paywall Modal -->
+  <div id="paywall">
+    <div class="paywall-card">
+      <h2>Your session ended</h2>
+      <p class="subtitle">You just created 2 minutes of unique music. Imagine what an hour sounds like.</p>
+      <ul class="paywall-features">
+        <li>
+          <div class="paywall-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+          Unlimited session length
+        </li>
+        <li>
+          <div class="paywall-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+          All 7 mood states unlocked
+        </li>
+        <li>
+          <div class="paywall-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+          Export session recordings
+        </li>
+        <li>
+          <div class="paywall-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+          5 visualizer themes
+        </li>
+        <li>
+          <div class="paywall-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>
+          Priority feature requests
+        </li>
+      </ul>
+      <div class="paywall-price">$4.99 <span>/ month</span></div>
+      <div class="paywall-period">Cancel anytime. 7-day free trial.</div>
+      <button id="upgrade-btn">Unlock Premium</button>
+      <br>
+      <button class="paywall-dismiss" id="paywall-dismiss">Try another free session</button>
+    </div>
+  </div>
+
+  <!-- Invisible typing capture -->
+  <textarea id="type-capture" aria-label="Type anything to create music"></textarea>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="top-bar">
+      <div class="logo">Life<span>Synth</span></div>
+      <div class="time-display">
+        <div id="clock"></div>
+        <div id="session-time">00:00</div>
+      </div>
+    </div>
+
+    <div class="meters">
+      <div class="meter">
+        <span class="meter-label">Velocity</span>
+        <div class="meter-bar"><div class="meter-fill velocity" id="meter-velocity"></div></div>
+        <span class="meter-value" id="val-velocity">0</span>
+      </div>
+      <div class="meter">
+        <span class="meter-label">Rhythm</span>
+        <div class="meter-bar"><div class="meter-fill rhythm" id="meter-rhythm"></div></div>
+        <span class="meter-value" id="val-rhythm">0</span>
+      </div>
+      <div class="meter">
+        <span class="meter-label">Energy</span>
+        <div class="meter-bar"><div class="meter-fill energy" id="meter-energy"></div></div>
+        <span class="meter-value" id="val-energy">0</span>
+      </div>
+      <div class="meter">
+        <span class="meter-label">Chaos</span>
+        <div class="meter-bar"><div class="meter-fill chaos" id="meter-chaos"></div></div>
+        <span class="meter-value" id="val-chaos">0</span>
+      </div>
+    </div>
+
+    <div class="note-history" id="note-history"></div>
+
+    <div class="mood-display">
+      <div class="waveform-hint" id="waveform">
+        <!-- Generated by JS -->
+      </div>
+      <div class="mood-genre" id="mood-genre">Initializing</div>
+      <div class="mood-name" id="mood-name" style="color: var(--accent-1);">...</div>
+    </div>
+
+    <div class="session-stats">
+      <div>Notes: <span id="stat-notes">0</span></div>
+      <div>Keys: <span id="stat-keys">0</span></div>
+      <div>Distance: <span id="stat-distance">0</span>px</div>
+    </div>
+  </div>
+
+  <script>
+    // ─── AUDIO ENGINE ───────────────────────────────────────
+    let audioCtx, masterGain, reverbNode, delayNode, compressor;
+    let isRunning = false;
+
+    // Musical scales
+    const SCALES = {
+      ambient:    [0, 2, 4, 7, 9, 12, 14, 16, 19, 21],       // Pentatonic
+      dreamy:     [0, 2, 3, 5, 7, 8, 10, 12, 14, 15],         // Natural minor
+      euphoric:   [0, 2, 4, 5, 7, 9, 11, 12, 14, 16],         // Major
+      tension:    [0, 1, 4, 5, 7, 8, 11, 12, 13, 16],         // Harmonic minor
+      cosmic:     [0, 2, 4, 6, 8, 10, 12, 14, 16, 18],        // Whole tone
+      mysterious: [0, 1, 3, 4, 6, 7, 9, 10, 12, 13],          // Diminished
+    };
+
+    const MOODS = {
+      calm:      { scale: 'ambient',    baseFreq: 220, color: '#5bf5c8', genre: 'Ambient Meditation',  name: 'Stillwater' },
+      flowing:   { scale: 'dreamy',     baseFreq: 261, color: '#7c5bf5', genre: 'Lo-Fi Dream',         name: 'Drifting' },
+      focused:   { scale: 'euphoric',   baseFreq: 293, color: '#5ba8f5', genre: 'Deep Focus',          name: 'Crystalline' },
+      energetic: { scale: 'euphoric',   baseFreq: 329, color: '#f5c85b', genre: 'Synthwave Pulse',     name: 'Solar Flare' },
+      frantic:   { scale: 'tension',    baseFreq: 369, color: '#f55b9a', genre: 'Drum & Bass',         name: 'Overdrive' },
+      chaotic:   { scale: 'mysterious', baseFreq: 392, color: '#f55b5b', genre: 'Glitch Storm',        name: 'Entropy' },
+      cosmic:    { scale: 'cosmic',     baseFreq: 246, color: '#c85bf5', genre: 'Space Ambient',       name: 'Nebula' },
+    };
+
+    let currentMood = MOODS.calm;
+    let currentScale = SCALES.ambient;
+
+    function initAudio() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Compressor
+      compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.value = -20;
+      compressor.knee.value = 30;
+      compressor.ratio.value = 8;
+      compressor.connect(audioCtx.destination);
+
+      // Master gain
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.15;
+      masterGain.connect(compressor);
+
+      // Delay
+      delayNode = audioCtx.createDelay(1.0);
+      delayNode.delayTime.value = 0.4;
+      const delayFeedback = audioCtx.createGain();
+      delayFeedback.gain.value = 0.3;
+      const delayFilter = audioCtx.createBiquadFilter();
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.value = 2000;
+      delayNode.connect(delayFilter);
+      delayFilter.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+      delayNode.connect(masterGain);
+
+      // Reverb (convolution)
+      reverbNode = createReverb(3, 2);
+      reverbNode.connect(masterGain);
+    }
+
+    function createReverb(duration, decay) {
+      const length = audioCtx.sampleRate * duration;
+      const impulse = audioCtx.createBuffer(2, length, audioCtx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = impulse.getChannelData(ch);
+        for (let i = 0; i < length; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+        }
+      }
+      const conv = audioCtx.createConvolver();
+      conv.buffer = impulse;
+      return conv;
+    }
+
+    function playNote(freq, duration, type = 'sine', volume = 0.3, pan = 0) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const panner = audioCtx.createStereoPanner();
+      const filter = audioCtx.createBiquadFilter();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      // Slight detune for warmth
+      osc.detune.setValueAtTime(Math.random() * 10 - 5, now);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(freq * 4, now);
+      filter.Q.value = 1;
+
+      panner.pan.value = Math.max(-1, Math.min(1, pan));
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(volume, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(panner);
+      panner.connect(masterGain);
+      panner.connect(delayNode);
+      panner.connect(reverbNode);
+
+      osc.start(now);
+      osc.stop(now + duration + 0.1);
+
+      totalNotes++;
+      addNoteDot(freq);
+    }
+
+    function playChord(freqs, duration, type = 'sine', volume = 0.12) {
+      freqs.forEach((f, i) => {
+        setTimeout(() => playNote(f, duration, type, volume, (i - 1) * 0.3), i * 40);
+      });
+    }
+
+    function playDrum(type = 'kick') {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      if (type === 'kick') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
+        gain.gain.setValueAtTime(0.6, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'hihat') {
+        const bufferSize = audioCtx.sampleRate * 0.05;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        const hpf = audioCtx.createBiquadFilter();
+        hpf.type = 'highpass';
+        hpf.frequency.value = 7000;
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        noise.connect(hpf);
+        hpf.connect(gain);
+        gain.connect(masterGain);
+        noise.start(now);
+      } else if (type === 'snare') {
+        // Noise component
+        const bufferSize = audioCtx.sampleRate * 0.1;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        const nGain = audioCtx.createGain();
+        nGain.gain.setValueAtTime(0.25, now);
+        nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        const bpf = audioCtx.createBiquadFilter();
+        bpf.type = 'bandpass';
+        bpf.frequency.value = 3000;
+        noise.connect(bpf);
+        bpf.connect(nGain);
+        nGain.connect(masterGain);
+        noise.start(now);
+        // Tonal component
+        const osc = audioCtx.createOscillator();
+        const oGain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(180, now);
+        oGain.gain.setValueAtTime(0.3, now);
+        oGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(oGain);
+        oGain.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      }
+    }
+
+    function getFreqFromScale(index) {
+      const octave = Math.floor(index / currentScale.length);
+      const note = currentScale[index % currentScale.length];
+      return currentMood.baseFreq * Math.pow(2, (note + octave * 12) / 12);
+    }
+
+    // ─── BEHAVIOR TRACKING ──────────────────────────────────
+    let mouseX = 0, mouseY = 0, prevMouseX = 0, prevMouseY = 0;
+    let mouseSpeed = 0, mouseSpeedSmooth = 0;
+    let totalMouseDist = 0;
+    let keyTimestamps = [];
+    let typingSpeed = 0;  // keys per second
+    let lastKeyTime = 0;
+    let keyIntervals = [];
+    let scrollSpeed = 0;
+    let idleTime = 0;
+    let lastActivityTime = Date.now();
+    let totalKeys = 0;
+    let totalNotes = 0;
+    let sessionStart = 0;
+
+    // Derived metrics (0-1)
+    let velocity = 0;   // mouse speed
+    let rhythm = 0;     // typing regularity
+    let energy = 0;     // overall activity
+    let chaos = 0;      // randomness/unpredictability
+
+    function trackMouse(e) {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      lastActivityTime = Date.now();
+
+      // Update custom cursor
+      document.getElementById('cursor').style.left = mouseX + 'px';
+      document.getElementById('cursor').style.top = mouseY + 'px';
+      document.getElementById('cursor-trail').style.left = mouseX + 'px';
+      document.getElementById('cursor-trail').style.top = mouseY + 'px';
+    }
+
+    function trackKey(e) {
+      if (!isRunning) return;
+      const now = Date.now();
+      lastActivityTime = now;
+      totalKeys++;
+
+      if (lastKeyTime > 0) {
+        const interval = now - lastKeyTime;
+        keyIntervals.push(interval);
+        if (keyIntervals.length > 20) keyIntervals.shift();
+      }
+      lastKeyTime = now;
+      keyTimestamps.push(now);
+      if (keyTimestamps.length > 50) keyTimestamps.shift();
+
+      // Play note based on key
+      const charCode = e.key.charCodeAt(0);
+      const noteIndex = charCode % currentScale.length;
+      const freq = getFreqFromScale(noteIndex + Math.floor(velocity * 5));
+      const pan = (mouseX / window.innerWidth) * 2 - 1;
+      const waveforms = ['sine', 'triangle', 'sawtooth', 'square'];
+      const waveIndex = Math.min(3, Math.floor(energy * 4));
+      const dur = Math.max(0.2, 1.5 - energy * 1.2);
+
+      playNote(freq, dur, waveforms[waveIndex], 0.15 + energy * 0.15, pan);
+
+      // Flash key
+      showKeyFlash(e.key, mouseX, mouseY);
+
+      // Occasional chord on space/enter
+      if (e.key === ' ' || e.key === 'Enter') {
+        const root = getFreqFromScale(Math.floor(Math.random() * 5));
+        playChord([root, root * 1.25, root * 1.5], dur + 0.5, 'triangle', 0.08);
+      }
+    }
+
+    function trackScroll(e) {
+      lastActivityTime = Date.now();
+      scrollSpeed = Math.min(1, Math.abs(e.deltaY) / 500);
+
+      // Scroll creates sweeping sounds
+      if (isRunning) {
+        const freq = 200 + scrollSpeed * 600 + (mouseY / window.innerHeight) * 200;
+        playNote(freq, 0.3, 'sine', 0.05 + scrollSpeed * 0.1, 0);
+      }
+    }
+
+    function trackClick(e) {
+      lastActivityTime = Date.now();
+      if (!isRunning) return;
+
+      document.getElementById('cursor').classList.add('active');
+      setTimeout(() => document.getElementById('cursor').classList.remove('active'), 200);
+
+      // Click = percussion
+      if (energy > 0.5) {
+        playDrum('snare');
+      } else {
+        playDrum('hihat');
+      }
+
+      // Plus a resonant note
+      const freq = getFreqFromScale(Math.floor((mouseY / window.innerHeight) * currentScale.length));
+      playNote(freq, 0.8, 'triangle', 0.2, (mouseX / window.innerWidth) * 2 - 1);
+    }
+
+    // ─── METRIC CALCULATIONS ────────────────────────────────
+    function updateMetrics() {
+      // Mouse velocity
+      const dx = mouseX - prevMouseX;
+      const dy = mouseY - prevMouseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      totalMouseDist += dist;
+      mouseSpeed = dist;
+      mouseSpeedSmooth = mouseSpeedSmooth * 0.9 + mouseSpeed * 0.1;
+      prevMouseX = mouseX;
+      prevMouseY = mouseY;
+
+      velocity = Math.min(1, mouseSpeedSmooth / 50);
+
+      // Typing rhythm (regularity of key intervals)
+      if (keyIntervals.length > 2) {
+        const avg = keyIntervals.reduce((a, b) => a + b, 0) / keyIntervals.length;
+        const variance = keyIntervals.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / keyIntervals.length;
+        const stdDev = Math.sqrt(variance);
+        rhythm = Math.max(0, 1 - stdDev / 500);
+
+        const recentKeys = keyTimestamps.filter(t => t > Date.now() - 3000).length;
+        typingSpeed = recentKeys / 3;
+      } else {
+        rhythm = 0;
+        typingSpeed = 0;
+      }
+
+      // Energy (combination of all activity)
+      const typingEnergy = Math.min(1, typingSpeed / 8);
+      energy = Math.min(1, velocity * 0.3 + typingEnergy * 0.5 + scrollSpeed * 0.2);
+      scrollSpeed *= 0.95; // decay
+
+      // Chaos (unpredictability)
+      const mouseJitter = mouseSpeed > 5 ? Math.abs(dx * dy) / (dist * dist + 1) : 0;
+      chaos = Math.min(1, mouseJitter * 2 + (1 - rhythm) * 0.5);
+
+      // Idle time
+      idleTime = (Date.now() - lastActivityTime) / 1000;
+
+      // Determine mood
+      updateMood();
+    }
+
+    function updateMood() {
+      let newMood;
+      if (idleTime > 10) {
+        newMood = MOODS.cosmic;
+      } else if (energy < 0.15) {
+        newMood = MOODS.calm;
+      } else if (energy < 0.3 && rhythm > 0.5) {
+        newMood = MOODS.flowing;
+      } else if (energy < 0.5 && rhythm > 0.6) {
+        newMood = MOODS.focused;
+      } else if (energy < 0.7) {
+        newMood = MOODS.energetic;
+      } else if (chaos > 0.5) {
+        newMood = MOODS.chaotic;
+      } else {
+        newMood = MOODS.frantic;
+      }
+
+      if (newMood !== currentMood) {
+        currentMood = newMood;
+        currentScale = SCALES[newMood.scale];
+        document.getElementById('mood-name').textContent = newMood.name;
+        document.getElementById('mood-name').style.color = newMood.color;
+        document.getElementById('mood-genre').textContent = newMood.genre;
+      }
+    }
+
+    // ─── AMBIENT GENERATOR ──────────────────────────────────
+    let ambientTimer = 0;
+    let beatTimer = 0;
+    let padTimer = 0;
+
+    function ambientTick() {
+      if (!isRunning) return;
+      ambientTimer++;
+
+      // Ambient drone (always playing, changes with mood)
+      if (ambientTimer % 120 === 0) {
+        const droneFreq = currentMood.baseFreq / 2;
+        playNote(droneFreq, 4, 'sine', 0.04 + energy * 0.02, 0);
+        playNote(droneFreq * 1.5, 5, 'sine', 0.02, 0.3);
+      }
+
+      // Beat pattern based on energy
+      beatTimer++;
+      const beatInterval = Math.max(8, Math.floor(40 - energy * 32));
+      if (energy > 0.3 && beatTimer % beatInterval === 0) {
+        playDrum('kick');
+        if (energy > 0.5 && beatTimer % (beatInterval * 2) === beatInterval) {
+          playDrum('snare');
+        }
+        if (energy > 0.4) {
+          playDrum('hihat');
+        }
+      }
+
+      // Pad/chord changes
+      padTimer++;
+      if (padTimer % 180 === 0 && idleTime < 5) {
+        const rootIdx = Math.floor(Math.random() * 5);
+        const root = getFreqFromScale(rootIdx);
+        const third = getFreqFromScale(rootIdx + 2);
+        const fifth = getFreqFromScale(rootIdx + 4);
+        playChord([root * 0.5, third * 0.5, fifth * 0.5], 3, 'sine', 0.06);
+      }
+
+      // Idle sparkles
+      if (idleTime > 3 && ambientTimer % 60 === 0) {
+        const sparkleFreq = getFreqFromScale(Math.floor(Math.random() * 8) + 5);
+        playNote(sparkleFreq, 2, 'sine', 0.03, Math.random() * 2 - 1);
+      }
+    }
+
+    // ─── VISUALIZER ─────────────────────────────────────────
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let wavePoints = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * window.devicePixelRatio;
+      canvas.height = window.innerHeight * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2 - 1;
+        this.life = 1;
+        this.decay = 0.003 + Math.random() * 0.008;
+        this.size = 1 + Math.random() * 3;
+        this.color = color || currentMood.color;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy -= 0.01; // float up
+        this.life -= this.decay;
+        this.size *= 0.998;
+      }
+      draw() {
+        ctx.globalAlpha = this.life * 0.6;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glow
+        ctx.globalAlpha = this.life * 0.15;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function spawnParticles(x, y, count, color) {
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle(x, y, color));
+      }
+    }
+
+    function drawVisualizer() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      ctx.globalAlpha = 0.08 + energy * 0.05;
+      ctx.fillStyle = '#06060e';
+      ctx.fillRect(0, 0, w, h);
+
+      // Central waveform
+      ctx.globalAlpha = 0.4 + energy * 0.3;
+      ctx.strokeStyle = currentMood.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      const centerY = h * 0.5;
+      const waveWidth = w * 0.6;
+      const startX = w * 0.2;
+      for (let i = 0; i <= 100; i++) {
+        const x = startX + (i / 100) * waveWidth;
+        const t = Date.now() / 1000;
+        const amp = 20 + energy * 80 + velocity * 40;
+        const freq1 = 0.02 + energy * 0.03;
+        const freq2 = 0.05 + chaos * 0.04;
+        const y = centerY +
+          Math.sin(i * freq1 * Math.PI + t * 2) * amp * 0.6 +
+          Math.sin(i * freq2 * Math.PI + t * 3.7) * amp * 0.3 +
+          Math.sin(i * 0.1 + t * 1.3) * amp * 0.1;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Second wave (offset)
+      ctx.globalAlpha = 0.15 + energy * 0.1;
+      ctx.strokeStyle = currentMood.color;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const x = startX + (i / 100) * waveWidth;
+        const t = Date.now() / 1000;
+        const amp = 15 + energy * 50;
+        const y = centerY +
+          Math.cos(i * 0.03 * Math.PI + t * 1.5) * amp * 0.7 +
+          Math.sin(i * 0.07 * Math.PI + t * 2.8) * amp * 0.3;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Mouse trail particles
+      if (isRunning && mouseSpeed > 3) {
+        spawnParticles(mouseX, mouseY, Math.floor(1 + energy * 3), currentMood.color);
+      }
+
+      // Update and draw particles
+      particles = particles.filter(p => p.life > 0);
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+
+      // Floating orbs (tied to energy)
+      ctx.globalAlpha = 0.08;
+      const orbCount = 3 + Math.floor(energy * 5);
+      for (let i = 0; i < orbCount; i++) {
+        const t = Date.now() / (3000 + i * 500);
+        const ox = w * 0.5 + Math.sin(t + i * 1.5) * (w * 0.3);
+        const oy = h * 0.5 + Math.cos(t * 0.7 + i * 2) * (h * 0.25);
+        const or = 30 + energy * 60 + Math.sin(t * 2) * 20;
+        const gradient = ctx.createRadialGradient(ox, oy, 0, ox, oy, or);
+        gradient.addColorStop(0, currentMood.color);
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(ox, oy, or, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    // ─── UI UPDATES ─────────────────────────────────────────
+    function updateUI() {
+      // Meters
+      const setMeter = (id, val) => {
+        document.getElementById(`meter-${id}`).style.width = (val * 100) + '%';
+        document.getElementById(`val-${id}`).textContent = Math.floor(val * 100);
+      };
+      setMeter('velocity', velocity);
+      setMeter('rhythm', rhythm);
+      setMeter('energy', energy);
+      setMeter('chaos', chaos);
+
+      // Clock
+      const now = new Date();
+      document.getElementById('clock').textContent =
+        now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      // Session time
+      if (sessionStart) {
+        const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+        const min = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const sec = String(elapsed % 60).padStart(2, '0');
+        document.getElementById('session-time').textContent = `${min}:${sec}`;
+      }
+
+      // Stats
+      document.getElementById('stat-notes').textContent = totalNotes;
+      document.getElementById('stat-keys').textContent = totalKeys;
+      document.getElementById('stat-distance').textContent = Math.floor(totalMouseDist);
+
+      // Waveform bars
+      updateWaveformBars();
+    }
+
+    function updateWaveformBars() {
+      const container = document.getElementById('waveform');
+      if (!container.children.length) {
+        for (let i = 0; i < 32; i++) {
+          const bar = document.createElement('div');
+          bar.className = 'waveform-bar';
+          bar.style.background = currentMood.color;
+          container.appendChild(bar);
+        }
+      }
+      const bars = container.children;
+      const t = Date.now() / 1000;
+      for (let i = 0; i < bars.length; i++) {
+        const h = 3 + Math.abs(Math.sin(i * 0.3 + t * 2 + energy * 5)) * (5 + energy * 22);
+        bars[i].style.height = h + 'px';
+        bars[i].style.background = currentMood.color;
+        bars[i].style.opacity = 0.3 + energy * 0.4;
+      }
+    }
+
+    function addNoteDot(freq) {
+      const container = document.getElementById('note-history');
+      const dot = document.createElement('div');
+      dot.className = 'note-dot';
+      const hue = (freq % 360);
+      dot.style.background = `hsl(${hue}, 70%, 60%)`;
+      container.prepend(dot);
+      if (container.children.length > 30) {
+        container.removeChild(container.lastChild);
+      }
+    }
+
+    function showKeyFlash(key, x, y) {
+      if (key.length > 1) return; // skip special keys
+      const el = document.createElement('div');
+      el.className = 'key-flash';
+      el.textContent = key;
+      el.style.left = (x + (Math.random() - 0.5) * 80) + 'px';
+      el.style.top = (y + (Math.random() - 0.5) * 80) + 'px';
+      el.style.color = currentMood.color;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 800);
+    }
+
+    // ─── MAIN LOOP ──────────────────────────────────────────
+    function gameLoop() {
+      if (!isRunning) return;
+      updateMetrics();
+      updateUI();
+      ambientTick();
+      drawVisualizer();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ─── PREMIUM / FREEMIUM ENGINE ─────────────────────────
+    const FREE_SESSION_SECONDS = 120; // 2 minutes
+    const FREE_MOODS = ['calm', 'flowing', 'focused']; // Free tier: 3 moods
+    let isPremium = false;
+    let sessionTimerInterval = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+
+    // ── Stripe config ──
+    // IMPORTANT: Replace with your real Stripe publishable key and price ID
+    const STRIPE_CONFIG = {
+      publishableKey: 'pk_live_YOUR_STRIPE_PUBLISHABLE_KEY',
+      priceId: 'price_YOUR_STRIPE_PRICE_ID',
+      successUrl: window.location.origin + '/app.html?premium=activated',
+      cancelUrl: window.location.origin + '/app.html',
+    };
+
+    function checkPremiumStatus() {
+      // Check URL params (returning from Stripe)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('premium') === 'activated') {
+        localStorage.setItem('lifesynth_premium', 'true');
+        localStorage.setItem('lifesynth_premium_date', new Date().toISOString());
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+      isPremium = localStorage.getItem('lifesynth_premium') === 'true';
+      updatePremiumUI();
+    }
+
+    function updatePremiumUI() {
+      const badge = document.getElementById('premium-badge');
+      if (isPremium) {
+        badge.textContent = 'Premium';
+        badge.className = 'premium-badge pro';
+        document.getElementById('export-btn').classList.add('visible');
+      } else {
+        badge.textContent = 'Free';
+        badge.className = 'premium-badge free';
+      }
+    }
+
+    function startSessionTimer() {
+      if (isPremium) return; // No timer for premium
+
+      const timerBar = document.getElementById('session-timer-bar');
+      const timerLabel = document.getElementById('timer-label');
+      timerLabel.classList.add('visible');
+
+      sessionTimerInterval = setInterval(() => {
+        const elapsed = (Date.now() - sessionStart) / 1000;
+        const remaining = FREE_SESSION_SECONDS - elapsed;
+        const pct = Math.min(100, (elapsed / FREE_SESSION_SECONDS) * 100);
+
+        timerBar.style.width = pct + '%';
+
+        if (remaining > 0) {
+          const min = Math.floor(remaining / 60);
+          const sec = Math.floor(remaining % 60);
+          timerLabel.textContent = 'Free session: ' + min + ':' + String(sec).padStart(2, '0') + ' remaining';
+        }
+
+        // Warning at 30 seconds
+        if (remaining <= 30 && remaining > 0) {
+          timerBar.style.background = 'linear-gradient(90deg, var(--accent-4), var(--accent-2))';
+        }
+
+        // Time's up
+        if (remaining <= 0) {
+          clearInterval(sessionTimerInterval);
+          endFreeSession();
+        }
+      }, 500);
+    }
+
+    function endFreeSession() {
+      isRunning = false;
+      // Fade out audio
+      if (masterGain) {
+        masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
+      }
+      // Show paywall
+      setTimeout(() => {
+        const paywall = document.getElementById('paywall');
+        paywall.style.display = 'flex';
+        requestAnimationFrame(() => {
+          paywall.classList.add('show');
+        });
+      }, 1000);
+    }
+
+    function handleUpgrade() {
+      // Redirect to Stripe Payment Link
+      window.location.href = 'https://buy.stripe.com/fZu3cocXU7ziacU35j1sQ00';
+    }
+
+    function activateDemoPremium() {
+      localStorage.setItem('lifesynth_premium', 'true');
+      localStorage.setItem('lifesynth_premium_date', new Date().toISOString());
+      isPremium = true;
+      updatePremiumUI();
+
+      // Hide paywall and restart
+      document.getElementById('paywall').classList.remove('show');
+      setTimeout(() => {
+        document.getElementById('paywall').style.display = 'none';
+        restartSession();
+      }, 600);
+    }
+
+    function restartSession() {
+      // Reset state
+      totalKeys = 0;
+      totalNotes = 0;
+      totalMouseDist = 0;
+      keyTimestamps = [];
+      keyIntervals = [];
+      particles = [];
+      document.getElementById('note-history').innerHTML = '';
+
+      // Reset timer bar
+      document.getElementById('session-timer-bar').style.width = '0%';
+      document.getElementById('session-timer-bar').style.background = 'linear-gradient(90deg, var(--accent-1), var(--accent-2))';
+      document.getElementById('timer-label').classList.remove('visible');
+
+      // Restart
+      if (masterGain) masterGain.gain.value = 0.15;
+      isRunning = true;
+      sessionStart = Date.now();
+      startSessionTimer();
+      gameLoop();
+    }
+
+    // ── Override mood selection for free tier ──
+    const originalUpdateMood = updateMood;
+    updateMood = function() {
+      originalUpdateMood();
+      if (!isPremium) {
+        // Restrict to free moods
+        const moodKey = Object.keys(MOODS).find(k => MOODS[k] === currentMood);
+        if (moodKey && !FREE_MOODS.includes(moodKey)) {
+          currentMood = MOODS.calm;
+          currentScale = SCALES[currentMood.scale];
+          document.getElementById('mood-name').textContent = currentMood.name;
+          document.getElementById('mood-name').style.color = currentMood.color;
+          document.getElementById('mood-genre').textContent = currentMood.genre;
+        }
+      }
+    };
+
+    // ── Recording / Export (Premium) ──
+    function startRecording() {
+      if (!isPremium || !audioCtx) return;
+      const dest = audioCtx.createMediaStreamDestination();
+      masterGain.connect(dest);
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm' });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+      mediaRecorder.start();
+      document.getElementById('rec-indicator').classList.add('active');
+    }
+
+    function exportRecording() {
+      if (!isPremium) {
+        // Show upgrade prompt
+        document.getElementById('paywall').style.display = 'flex';
+        requestAnimationFrame(() => document.getElementById('paywall').classList.add('show'));
+        return;
+      }
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const now = new Date();
+          a.download = 'lifesynth-session-' + now.toISOString().slice(0,16).replace(/[T:]/g, '-') + '.webm';
+          a.click();
+          URL.revokeObjectURL(url);
+          document.getElementById('rec-indicator').classList.remove('active');
+        };
+      }
+    }
+
+    // ─── INIT ───────────────────────────────────────────────
+    function start() {
+      checkPremiumStatus();
+      initAudio();
+      isRunning = true;
+      sessionStart = Date.now();
+
+      document.getElementById('intro').classList.add('hidden');
+      document.getElementById('hud').classList.add('visible');
+
+      // Focus the invisible textarea
+      const capture = document.getElementById('type-capture');
+      capture.style.pointerEvents = 'auto';
+      capture.focus();
+
+      // Start session timer (free tier only)
+      startSessionTimer();
+
+      // Start recording (premium only)
+      if (isPremium) {
+        setTimeout(() => startRecording(), 500);
+      }
+
+      // Initial drone
+      setTimeout(() => {
+        const drone = currentMood.baseFreq / 2;
+        playNote(drone, 6, 'sine', 0.05, 0);
+        playNote(drone * 1.5, 5, 'sine', 0.03, 0.5);
+        playNote(drone * 2, 4, 'sine', 0.02, -0.5);
+      }, 500);
+
+      resizeCanvas();
+      gameLoop();
+    }
+
+    // Events
+    document.getElementById('start-btn').addEventListener('click', start);
+    document.addEventListener('mousemove', trackMouse);
+    document.addEventListener('keydown', trackKey);
+    document.addEventListener('wheel', trackScroll);
+    document.addEventListener('click', trackClick);
+    window.addEventListener('resize', resizeCanvas);
+
+    // Paywall events
+    document.getElementById('upgrade-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleUpgrade();
+    });
+    document.getElementById('paywall-dismiss').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('paywall').classList.remove('show');
+      setTimeout(() => {
+        document.getElementById('paywall').style.display = 'none';
+        restartSession();
+      }, 600);
+    });
+    document.getElementById('export-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportRecording();
+    });
+
+    // Keep textarea focused
+    document.addEventListener('click', () => {
+      if (isRunning) {
+        document.getElementById('type-capture').focus();
+      }
+    });
+
+    // Prevent default behaviors on textarea
+    document.getElementById('type-capture').addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') e.preventDefault();
+    });
+
+    // Initial premium check
+    checkPremiumStatus();
+
+    // Initial canvas setup
+    resizeCanvas();
+
+    // Pre-render intro particles
+    (function introAnim() {
+      if (isRunning) return;
+      ctx.globalAlpha = 0.03;
+      ctx.fillStyle = '#06060e';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+      const t = Date.now() / 1000;
+      ctx.globalAlpha = 0.05;
+      for (let i = 0; i < 5; i++) {
+        const x = window.innerWidth / 2 + Math.sin(t + i * 1.2) * 200;
+        const y = window.innerHeight / 2 + Math.cos(t * 0.8 + i * 1.5) * 150;
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, 80);
+        gradient.addColorStop(0, '#7c5bf5');
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, 80, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(introAnim);
+    })();
+  </script>
+</body>
+</html>

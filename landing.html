@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life Synth - Your Life. Composed.</title>
+  <meta name="description" content="Life Synth turns your real-time digital behavior into a continuously evolving musical composition. Every keystroke, mouse movement, and moment of stillness becomes music.">
+  <meta name="keywords" content="music, generative, digital behavior, symphony, ambient, creative tool">
+  <meta name="author" content="Life Synth">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Life Synth - Your Life. Composed.">
+  <meta property="og:description" content="Every keystroke, mouse movement, and moment of stillness becomes music. Life Synth turns your digital behavior into a living, evolving symphony.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://lifesynth.app">
+  <meta property="og:site_name" content="Life Synth">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Life Synth - Your Life. Composed.">
+  <meta name="twitter:description" content="Every keystroke, mouse movement, and moment of stillness becomes music.">
+
+  <link rel="canonical" href="https://lifesynth.app">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #06060e;
+      --surface: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.06);
+      --text: #e8e6f0;
+      --text-dim: rgba(232,230,240,0.5);
+      --purple: #7c5bf5;
+      --pink: #f55b9a;
+      --green: #5bf5c8;
+      --gold: #f5c85b;
+      --font: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===== PARTICLE CANVAS ===== */
+    #particle-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ===== GLOBAL UTILITIES ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--purple), var(--pink), var(--green));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gradient-text-alt {
+      background: linear-gradient(135deg, var(--green), var(--purple));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* ===== SCROLL ANIMATIONS ===== */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    /* ===== NAVBAR ===== */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      transition: background 0.4s, backdrop-filter 0.4s, padding 0.4s;
+    }
+    .navbar.scrolled {
+      background: rgba(6,6,14,0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .logo-icon::after {
+      content: '';
+      width: 12px; height: 12px;
+      border: 2px solid rgba(255,255,255,0.9);
+      border-radius: 50%;
+      position: relative;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 400;
+      transition: color 0.3s;
+      letter-spacing: 0.2px;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      padding: 8px 20px;
+      border-radius: 8px;
+      background: rgba(124,91,245,0.15);
+      border: 1px solid rgba(124,91,245,0.3);
+      color: var(--purple) !important;
+      font-weight: 600 !important;
+      transition: all 0.3s !important;
+    }
+    .nav-cta:hover {
+      background: rgba(124,91,245,0.25) !important;
+      border-color: rgba(124,91,245,0.5) !important;
+    }
+
+    /* Mobile nav toggle */
+    .nav-toggle {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .nav-toggle span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.3s;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+    }
+    .hero-glow {
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(124,91,245,0.12) 0%, rgba(245,91,154,0.06) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      background: rgba(124,91,245,0.1);
+      border: 1px solid rgba(124,91,245,0.2);
+      font-size: 0.82rem;
+      font-weight: 400;
+      color: var(--purple);
+      margin-bottom: 32px;
+      letter-spacing: 0.5px;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(91,245,200,0.4); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(91,245,200,0); }
+    }
+
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 6.5rem);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+    }
+    .hero-subtitle {
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      font-weight: 300;
+      color: var(--text-dim);
+      max-width: 620px;
+      margin: 0 auto 48px;
+      line-height: 1.7;
+    }
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 36px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--purple), #9b7bff);
+      color: #fff;
+      font-family: var(--font);
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 40px rgba(124,91,245,0.25), 0 4px 20px rgba(124,91,245,0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition: left 0.6s;
+    }
+    .btn-primary:hover::before { left: 100%; }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 60px rgba(124,91,245,0.35), 0 8px 30px rgba(124,91,245,0.3);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 36px;
+      border-radius: 14px;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 1rem;
+      font-weight: 400;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn-secondary:hover {
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .play-icon {
+      width: 18px; height: 18px;
+      position: relative;
+    }
+    .play-icon::before {
+      content: '';
+      display: block;
+      width: 0; height: 0;
+      border-style: solid;
+      border-width: 8px 0 8px 14px;
+      border-color: transparent transparent transparent var(--text);
+    }
+
+    /* Hero scroll indicator */
+    .scroll-indicator {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      opacity: 0.4;
+      animation: float-gentle 3s ease-in-out infinite;
+    }
+    .scroll-indicator span {
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--text), transparent);
+    }
+    @keyframes float-gentle {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* ===== SECTION SHARED ===== */
+    section {
+      position: relative;
+      z-index: 1;
+      padding: 120px 0;
+    }
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--purple);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+      line-height: 1.15;
+    }
+    .section-desc {
+      font-size: 1.05rem;
+      font-weight: 300;
+      color: var(--text-dim);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    /* ===== HOW IT WORKS ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-top: 64px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 28px;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--purple), transparent);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-card:hover {
+      border-color: rgba(124,91,245,0.15);
+      background: rgba(255,255,255,0.05);
+      transform: translateY(-4px);
+    }
+    .feature-card:nth-child(2)::before { background: linear-gradient(90deg, transparent, var(--pink), transparent); }
+    .feature-card:nth-child(2):hover { border-color: rgba(245,91,154,0.15); }
+    .feature-card:nth-child(3)::before { background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+    .feature-card:nth-child(3):hover { border-color: rgba(245,200,91,0.15); }
+    .feature-card:nth-child(4)::before { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+    .feature-card:nth-child(4):hover { border-color: rgba(91,245,200,0.15); }
+
+    .feature-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .feature-icon.purple {
+      background: rgba(124,91,245,0.1);
+      border: 1px solid rgba(124,91,245,0.15);
+    }
+    .feature-icon.pink {
+      background: rgba(245,91,154,0.1);
+      border: 1px solid rgba(245,91,154,0.15);
+    }
+    .feature-icon.gold {
+      background: rgba(245,200,91,0.1);
+      border: 1px solid rgba(245,200,91,0.15);
+    }
+    .feature-icon.green {
+      background: rgba(91,245,200,0.1);
+      border: 1px solid rgba(91,245,200,0.15);
+    }
+
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      letter-spacing: -0.3px;
+    }
+    .feature-arrow {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .feature-arrow .arrow-line {
+      display: inline-block;
+      width: 16px;
+      height: 1px;
+      background: var(--text-dim);
+      position: relative;
+    }
+    .feature-arrow .arrow-line::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: -3px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 3px 0 3px 5px;
+      border-color: transparent transparent transparent var(--text-dim);
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    /* ===== MOOD STATES ===== */
+    .moods-section {
+      overflow: hidden;
+    }
+    .moods-header {
+      margin-bottom: 64px;
+    }
+    .moods-scroll {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 0 24px 20px;
+      scroll-snap-type: x mandatory;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .moods-scroll::-webkit-scrollbar { display: none; }
+
+    .mood-card {
+      flex: 0 0 220px;
+      scroll-snap-align: start;
+      border-radius: 20px;
+      padding: 32px 24px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      transition: all 0.4s;
+      cursor: default;
+    }
+    .mood-card:hover {
+      transform: translateY(-4px);
+    }
+    .mood-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 20px;
+      opacity: 0.06;
+      z-index: 0;
+    }
+    .mood-card > * { position: relative; z-index: 1; }
+
+    .mood-orb {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .mood-orb::after {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      opacity: 0.3;
+      filter: blur(10px);
+    }
+
+    .mood-card h4 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+    .mood-card p {
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: var(--text-dim);
+      line-height: 1.55;
+    }
+    .mood-tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      font-weight: 300;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-top: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Mood colors */
+    .mood-stillwater { --mc: #4a8fe7; }
+    .mood-stillwater::before { background: #4a8fe7; }
+    .mood-stillwater .mood-orb { background: radial-gradient(circle at 30% 30%, #6ab0ff, #2a6fc7); }
+    .mood-stillwater .mood-orb::after { background: #4a8fe7; }
+    .mood-stillwater .mood-tag { background: rgba(74,143,231,0.1); color: #4a8fe7; }
+
+    .mood-drifting { --mc: #8b7cf5; }
+    .mood-drifting::before { background: #8b7cf5; }
+    .mood-drifting .mood-orb { background: radial-gradient(circle at 30% 30%, #b0a0ff, #6a5bd4); }
+    .mood-drifting .mood-orb::after { background: #8b7cf5; }
+    .mood-drifting .mood-tag { background: rgba(139,124,245,0.1); color: #8b7cf5; }
+
+    .mood-crystalline { --mc: #5bf5c8; }
+    .mood-crystalline::before { background: #5bf5c8; }
+    .mood-crystalline .mood-orb { background: radial-gradient(circle at 30% 30%, #8bffd8, #30c9a0); }
+    .mood-crystalline .mood-orb::after { background: #5bf5c8; }
+    .mood-crystalline .mood-tag { background: rgba(91,245,200,0.1); color: #5bf5c8; }
+
+    .mood-solarflare { --mc: #f5c85b; }
+    .mood-solarflare::before { background: #f5c85b; }
+    .mood-solarflare .mood-orb { background: radial-gradient(circle at 30% 30%, #ffe08b, #d4a030); }
+    .mood-solarflare .mood-orb::after { background: #f5c85b; }
+    .mood-solarflare .mood-tag { background: rgba(245,200,91,0.1); color: #f5c85b; }
+
+    .mood-overdrive { --mc: #f55b5b; }
+    .mood-overdrive::before { background: #f55b5b; }
+    .mood-overdrive .mood-orb { background: radial-gradient(circle at 30% 30%, #ff8b8b, #d43030); }
+    .mood-overdrive .mood-orb::after { background: #f55b5b; }
+    .mood-overdrive .mood-tag { background: rgba(245,91,91,0.1); color: #f55b5b; }
+
+    .mood-entropy { --mc: #f55b9a; }
+    .mood-entropy::before { background: #f55b9a; }
+    .mood-entropy .mood-orb { background: radial-gradient(circle at 30% 30%, #ff8bba, #d43080); }
+    .mood-entropy .mood-orb::after { background: #f55b9a; }
+    .mood-entropy .mood-tag { background: rgba(245,91,154,0.1); color: #f55b9a; }
+
+    .mood-nebula { --mc: #a55bf5; }
+    .mood-nebula::before { background: #a55bf5; }
+    .mood-nebula .mood-orb { background: radial-gradient(circle at 30% 30%, #c58bff, #8430d4); }
+    .mood-nebula .mood-orb::after { background: #a55bf5; }
+    .mood-nebula .mood-tag { background: rgba(165,91,245,0.1); color: #a55bf5; }
+
+    .mood-card:hover { border-color: var(--mc, var(--border)); }
+
+    /* ===== PRICING ===== */
+    .pricing-section {
+      padding-bottom: 140px;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      max-width: 820px;
+      margin: 64px auto 0;
+    }
+    .pricing-card {
+      border-radius: 24px;
+      padding: 44px 36px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: all 0.4s;
+    }
+    .pricing-card:hover {
+      transform: translateY(-4px);
+    }
+    .pricing-card.featured {
+      border-color: rgba(124,91,245,0.3);
+      background: rgba(124,91,245,0.04);
+    }
+    .pricing-card.featured::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--purple), var(--pink), var(--green));
+    }
+    .pricing-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff;
+      margin-bottom: 20px;
+    }
+    .pricing-tier {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .pricing-price {
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: -2px;
+      margin-bottom: 4px;
+    }
+    .pricing-price span {
+      font-size: 1rem;
+      font-weight: 300;
+      color: var(--text-dim);
+      letter-spacing: 0;
+    }
+    .pricing-desc {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      font-weight: 300;
+      margin-bottom: 32px;
+    }
+    .pricing-features {
+      list-style: none;
+      margin-bottom: 36px;
+    }
+    .pricing-features li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+      font-weight: 300;
+      padding: 8px 0;
+      color: var(--text);
+    }
+    .check-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .pricing-card .btn-primary,
+    .pricing-card .btn-secondary {
+      width: 100%;
+      justify-content: center;
+      padding: 14px 24px;
+      font-size: 0.95rem;
+    }
+
+    /* ===== DIVIDER ===== */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 0 auto;
+      max-width: 600px;
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 48px 0;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-copy {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-weight: 300;
+      transition: color 0.3s;
+    }
+    .footer-links a:hover { color: var(--text); }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0; right: 0;
+        background: rgba(6,6,14,0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 24px;
+        border-bottom: 1px solid var(--border);
+        gap: 16px;
+      }
+      .nav-toggle { display: flex; }
+      .features-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 420px; }
+      .hero h1 { letter-spacing: -1px; }
+      section { padding: 80px 0; }
+      .mood-card { flex: 0 0 180px; padding: 24px 20px; }
+      .footer-inner {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+    @media (max-width: 480px) {
+      .hero-buttons { flex-direction: column; width: 100%; }
+      .hero-buttons .btn-primary,
+      .hero-buttons .btn-secondary { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="particle-canvas" aria-hidden="true"></canvas>
+
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="#" class="logo">
+        <div class="logo-icon"></div>
+        Life Synth
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#moods">Mood States</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="app.html" class="nav-cta">Launch App</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="hero-badge reveal">
+        <span class="hero-badge-dot"></span>
+        Now in Public Beta
+      </div>
+      <h1 class="reveal reveal-delay-1">
+        <span class="gradient-text">Your Life.</span><br>Composed.
+      </h1>
+      <p class="hero-subtitle reveal reveal-delay-2">
+        Every keystroke, mouse movement, and moment of stillness becomes music.
+        Life Synth turns your digital behavior into a living, evolving symphony.
+      </p>
+      <div class="hero-buttons reveal reveal-delay-3">
+        <a href="app.html" class="btn-primary">
+          Try Free
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <button class="btn-secondary" id="watch-demo-btn">
+          <span class="play-icon"></span>
+          Watch Demo
+        </button>
+      </div>
+    </div>
+    <div class="scroll-indicator">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works">
+    <div class="container">
+      <div class="reveal">
+        <p class="section-label">How It Works</p>
+        <h2 class="section-title">Your behavior is the <span class="gradient-text">instrument.</span></h2>
+        <p class="section-desc">Every digital action generates a unique sound. Combined, they create a composition that is entirely, unmistakably yours.</p>
+      </div>
+      <div class="features-grid">
+
+        <!-- Mouse -->
+        <div class="feature-card reveal reveal-delay-1">
+          <div class="feature-icon purple">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="2" width="12" height="20" rx="6" stroke="#7c5bf5" stroke-width="1.5"/>
+              <line x1="12" y1="2" x2="12" y2="10" stroke="#7c5bf5" stroke-width="1.5"/>
+              <circle cx="12" cy="7" r="1.5" fill="#7c5bf5"/>
+            </svg>
+          </div>
+          <h3>Mouse Movement</h3>
+          <div class="feature-arrow"><span class="arrow-line"></span> Spatial Sound</div>
+          <p>Your cursor traces melodies across a spatial soundstage. Speed controls velocity, position controls panning and particle density.</p>
+        </div>
+
+        <!-- Typing -->
+        <div class="feature-card reveal reveal-delay-2">
+          <div class="feature-icon pink">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="6" width="20" height="12" rx="2" stroke="#f55b9a" stroke-width="1.5"/>
+              <rect x="5" y="9" width="3" height="2" rx="0.5" fill="#f55b9a"/>
+              <rect x="10" y="9" width="3" height="2" rx="0.5" fill="#f55b9a"/>
+              <rect x="16" y="9" width="3" height="2" rx="0.5" fill="#f55b9a"/>
+              <rect x="7" y="13" width="10" height="2" rx="0.5" fill="#f55b9a"/>
+            </svg>
+          </div>
+          <h3>Typing Rhythm</h3>
+          <div class="feature-arrow"><span class="arrow-line"></span> Melodic Patterns</div>
+          <p>Each key triggers a note from a dynamic scale. Your typing rhythm defines the tempo. Fast bursts create arpeggios; pauses create rests.</p>
+        </div>
+
+        <!-- Clicking -->
+        <div class="feature-card reveal reveal-delay-3">
+          <div class="feature-icon gold">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="4" stroke="#f5c85b" stroke-width="1.5"/>
+              <circle cx="12" cy="12" r="8" stroke="#f5c85b" stroke-width="1" stroke-dasharray="3 3"/>
+              <line x1="12" y1="2" x2="12" y2="4" stroke="#f5c85b" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="12" y1="20" x2="12" y2="22" stroke="#f5c85b" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="2" y1="12" x2="4" y2="12" stroke="#f5c85b" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="20" y1="12" x2="22" y2="12" stroke="#f5c85b" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3>Clicking</h3>
+          <div class="feature-arrow"><span class="arrow-line"></span> Percussion</div>
+          <p>Clicks become percussive hits - snares, kicks, and hi-hats. Click intensity and frequency shape the rhythmic energy of your composition.</p>
+        </div>
+
+        <!-- Idle -->
+        <div class="feature-card reveal reveal-delay-4">
+          <div class="feature-icon green">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="#5bf5c8" stroke-width="1.5"/>
+              <circle cx="8" cy="10" r="1" fill="#5bf5c8"/>
+              <circle cx="15" cy="8" r="0.7" fill="#5bf5c8"/>
+              <circle cx="10" cy="15" r="0.7" fill="#5bf5c8"/>
+              <circle cx="16" cy="14" r="1" fill="#5bf5c8"/>
+              <circle cx="12" cy="12" r="0.5" fill="#5bf5c8"/>
+              <path d="M6 18 Q 12 14, 18 18" stroke="#5bf5c8" stroke-width="1" fill="none" opacity="0.4"/>
+            </svg>
+          </div>
+          <h3>Going Idle</h3>
+          <div class="feature-arrow"><span class="arrow-line"></span> Ambient Drift</div>
+          <p>Step away and the music doesn't stop. It evolves into cosmic ambient pads, shimmering sparkles, and deep space drone textures.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- Mood States -->
+  <section class="moods-section" id="moods">
+    <div class="container moods-header reveal">
+      <p class="section-label">Mood States</p>
+      <h2 class="section-title">Seven worlds of <span class="gradient-text-alt">sound.</span></h2>
+      <p class="section-desc">Your behavior intensity determines the mood. From serene stillness to chaotic overdrive - each state has its own palette of sounds, scales, and visuals.</p>
+    </div>
+    <div class="moods-scroll reveal reveal-delay-1">
+
+      <div class="mood-card mood-stillwater">
+        <div class="mood-orb"></div>
+        <h4>Stillwater</h4>
+        <p>Deep calm. Slow pads, soft piano, minimal movement.</p>
+        <span class="mood-tag">Low Activity</span>
+      </div>
+
+      <div class="mood-card mood-drifting">
+        <div class="mood-orb"></div>
+        <h4>Drifting</h4>
+        <p>Gentle flow. Warm synths, light arpeggios, soft pulses.</p>
+        <span class="mood-tag">Casual</span>
+      </div>
+
+      <div class="mood-card mood-crystalline">
+        <div class="mood-orb"></div>
+        <h4>Crystalline</h4>
+        <p>Focused clarity. Bright tones, precise rhythms, clean textures.</p>
+        <span class="mood-tag">Focused</span>
+      </div>
+
+      <div class="mood-card mood-solarflare">
+        <div class="mood-orb"></div>
+        <h4>Solar Flare</h4>
+        <p>Rising energy. Bold harmonics, driving bass, warm intensity.</p>
+        <span class="mood-tag">Active</span>
+      </div>
+
+      <div class="mood-card mood-overdrive">
+        <div class="mood-orb"></div>
+        <h4>Overdrive</h4>
+        <p>Peak intensity. Heavy percussion, dense layers, maximum energy.</p>
+        <span class="mood-tag">Intense</span>
+      </div>
+
+      <div class="mood-card mood-entropy">
+        <div class="mood-orb"></div>
+        <h4>Entropy</h4>
+        <p>Controlled chaos. Glitch textures, unpredictable rhythms, dissonance.</p>
+        <span class="mood-tag">Chaotic</span>
+      </div>
+
+      <div class="mood-card mood-nebula">
+        <div class="mood-orb"></div>
+        <h4>Nebula</h4>
+        <p>Deep space. Vast reverbs, cosmic pads, infinite atmosphere.</p>
+        <span class="mood-tag">Transcendent</span>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- Pricing -->
+  <section class="pricing-section" id="pricing">
+    <div class="container">
+      <div class="reveal" style="text-align:center;">
+        <p class="section-label">Pricing</p>
+        <h2 class="section-title">Start free. <span class="gradient-text">Go limitless.</span></h2>
+        <p class="section-desc" style="margin: 0 auto;">No credit card required to start. Upgrade when you're ready for the full experience.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Free -->
+        <div class="pricing-card reveal reveal-delay-1">
+          <p class="pricing-tier">Free</p>
+          <p class="pricing-price">$0</p>
+          <p class="pricing-desc">Perfect for exploring.</p>
+          <ul class="pricing-features">
+            <li>
+              <svg class="check-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(232,230,240,0.2)" stroke-width="1"/><path d="M5.5 9.5l2 2 5-5" stroke="#5bf5c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              2-minute sessions
+            </li>
+            <li>
+              <svg class="check-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(232,230,240,0.2)" stroke-width="1"/><path d="M5.5 9.5l2 2 5-5" stroke="#5bf5c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              3 mood states
+            </li>
+            <li>
+              <svg class="check-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(232,230,240,0.2)" stroke-width="1"/><path d="M5.5 9.5l2 2 5-5" stroke="#5bf5c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Basic visualizer
+            </li>
+          </ul>
+          <a href="app.html" class="btn-secondary" style="text-align:center; display:flex;">Start Free</a>
+        </div>
+
+        <!-- Premium -->
+        <div class="pricing-card featured reveal reveal-delay-2">
+          <span class="pricing-badge">Most Popular</span>
+          <p class="pricing-tier">Premium</p>
+          <p class="pricing-price">$4.99 <span>/ mo</span></p>
+          <p class="pricing-desc">The full symphony.</p>
+          <ul class="pricing-features">
+            <li>
+              <svg class="check-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(124,91,245,0.3)" stroke-width="1"/><path d="M5.5 9.5l2 2 5-5" stroke="#7c5bf5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Unlimited sessions
+            </li>
+            <li>
+              <svg class="check-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(124,91,245,0.3)" stroke-width="1"/><path d="M5.5 9.5l2 2 5-5" stroke="#7c5bf5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              All 7 mood states
+            </li>
+            <li>
+              <svg class="check-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(124,91,245,0.3)" stroke-width="1"/><path d="M5.5 9.5l2 2 5-5" stroke="#7c5bf5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              5 visualizer themes
+            </li>
+            <li>
+              <svg class="check-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(124,91,245,0.3)" stroke-width="1"/><path d="M5.5 9.5l2 2 5-5" stroke="#7c5bf5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Export recordings
+            </li>
+            <li>
+              <svg class="check-icon" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="rgba(124,91,245,0.3)" stroke-width="1"/><path d="M5.5 9.5l2 2 5-5" stroke="#7c5bf5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Priority features
+            </li>
+          </ul>
+          <a href="https://buy.stripe.com/fZu3cocXU7ziacU35j1sQ00" class="btn-primary" id="premium-checkout" style="text-align:center; display:block; text-decoration:none;">Go Premium</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <p class="footer-copy">&copy; 2026 Life Synth. All rights reserved.</p>
+        <ul class="footer-links">
+          <li><a href="#">Terms</a></li>
+          <li><a href="#">Privacy</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    /* ===== PARTICLE CANVAS ===== */
+    (function() {
+      var canvas = document.getElementById('particle-canvas');
+      var ctx = canvas.getContext('2d');
+      var particles = [];
+      var mouse = { x: -1000, y: -1000 };
+      var dpr = window.devicePixelRatio || 1;
+
+      function resize() {
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+        ctx.scale(dpr, dpr);
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      document.addEventListener('mousemove', function(e) {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+      });
+
+      var colors = [
+        'rgba(124,91,245,', 'rgba(245,91,154,',
+        'rgba(91,245,200,', 'rgba(245,200,91,'
+      ];
+
+      function createParticle() {
+        var c = colors[Math.floor(Math.random() * colors.length)];
+        return {
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: (Math.random() - 0.5) * 0.3,
+          r: Math.random() * 1.5 + 0.5,
+          color: c,
+          alpha: Math.random() * 0.4 + 0.1,
+          pulse: Math.random() * Math.PI * 2,
+          pulseSpeed: Math.random() * 0.02 + 0.005
+        };
+      }
+
+      var count = Math.min(Math.floor(window.innerWidth * 0.08), 100);
+      for (var i = 0; i < count; i++) {
+        particles.push(createParticle());
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
+          p.pulse += p.pulseSpeed;
+          var a = p.alpha * (0.6 + 0.4 * Math.sin(p.pulse));
+
+          /* subtle mouse interaction */
+          var dx = mouse.x - p.x;
+          var dy = mouse.y - p.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 150) {
+            var force = (150 - dist) / 150 * 0.15;
+            p.vx -= (dx / dist) * force;
+            p.vy -= (dy / dist) * force;
+          }
+
+          p.x += p.vx;
+          p.y += p.vy;
+
+          /* dampen */
+          p.vx *= 0.995;
+          p.vy *= 0.995;
+
+          /* wrap */
+          if (p.x < -10) p.x = window.innerWidth + 10;
+          if (p.x > window.innerWidth + 10) p.x = -10;
+          if (p.y < -10) p.y = window.innerHeight + 10;
+          if (p.y > window.innerHeight + 10) p.y = -10;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color + a + ')';
+          ctx.fill();
+
+          /* glow */
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+          ctx.fillStyle = p.color + (a * 0.15) + ')';
+          ctx.fill();
+        }
+
+        /* draw connections */
+        for (var i = 0; i < particles.length; i++) {
+          for (var j = i + 1; j < particles.length; j++) {
+            var dx = particles[i].x - particles[j].x;
+            var dy = particles[i].y - particles[j].y;
+            var d = Math.sqrt(dx * dx + dy * dy);
+            if (d < 120) {
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.strokeStyle = 'rgba(124,91,245,' + (0.06 * (1 - d / 120)) + ')';
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    /* ===== NAVBAR SCROLL ===== */
+    (function() {
+      var navbar = document.getElementById('navbar');
+      var last = 0;
+      window.addEventListener('scroll', function() {
+        var st = window.pageYOffset;
+        if (st > 60) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+        last = st;
+      });
+    })();
+
+    /* ===== MOBILE NAV ===== */
+    (function() {
+      var toggle = document.getElementById('nav-toggle');
+      var links = document.getElementById('nav-links');
+      toggle.addEventListener('click', function() {
+        links.classList.toggle('open');
+      });
+      /* close on link click */
+      var items = links.querySelectorAll('a');
+      for (var i = 0; i < items.length; i++) {
+        items[i].addEventListener('click', function() {
+          links.classList.remove('open');
+        });
+      }
+    })();
+
+    /* ===== INTERSECTION OBSERVER ===== */
+    (function() {
+      var reveals = document.querySelectorAll('.reveal');
+      if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        reveals.forEach(function(el) {
+          observer.observe(el);
+        });
+      } else {
+        /* fallback */
+        reveals.forEach(function(el) {
+          el.classList.add('visible');
+        });
+      }
+    })();
+
+    /* ===== SMOOTH ANCHOR SCROLL ===== */
+    (function() {
+      var anchors = document.querySelectorAll('a[href^="#"]');
+      anchors.forEach(function(a) {
+        a.addEventListener('click', function(e) {
+          var target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
