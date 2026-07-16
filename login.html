@@ -40,7 +40,6 @@
       position: relative;
     }
 
-    /* Ambient background glows */
     .glow-1 {
       position: absolute;
       top: 10%; left: 10%;
@@ -103,7 +102,7 @@
 
     .login-container {
       width: 90%;
-      max-width: 420px;
+      max-width: 440px;
       background: rgba(12, 12, 26, 0.7);
       border: 1px solid var(--border);
       backdrop-filter: blur(25px);
@@ -127,7 +126,7 @@
     .subtitle {
       font-size: 0.9rem;
       color: var(--text-dim);
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
 
     form {
@@ -168,6 +167,18 @@
       box-shadow: 0 0 10px rgba(124, 91, 245, 0.2);
     }
 
+    .forgot-link {
+      align-self: flex-end;
+      font-size: 0.8rem;
+      color: var(--purple);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .forgot-link:hover {
+      color: var(--pink);
+    }
+
     .btn-submit {
       background: linear-gradient(135deg, var(--purple), var(--pink));
       border: none;
@@ -189,6 +200,59 @@
 
     .btn-submit:active {
       transform: translateY(0);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.5rem 0;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .divider::before { margin-right: .5em; }
+    .divider::after { margin-left: .5em; }
+
+    .oauth-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .btn-oauth {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-oauth:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--purple);
+      box-shadow: 0 0 10px rgba(124, 91, 245, 0.15);
+    }
+
+    .oauth-icon {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
     }
 
     .auth-toggle {
@@ -218,6 +282,7 @@
       border-radius: 6px;
       font-size: 0.85rem;
       text-align: center;
+      margin-bottom: 1.25rem;
       display: none;
     }
 
@@ -229,6 +294,7 @@
       border-radius: 6px;
       font-size: 0.85rem;
       text-align: center;
+      margin-bottom: 1.25rem;
       display: none;
     }
   </style>
@@ -254,73 +320,161 @@
     <div id="success-box" class="success-msg"></div>
 
     <form id="login-form">
-      <div class="form-group">
+      <div class="form-group" id="email-group">
         <label for="email">Email Address</label>
         <input type="email" id="email" placeholder="you@example.com" required>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="password-group">
         <label for="password">Password</label>
-        <input type="password" id="password" placeholder="••••••••" required>
+        <input type="password" id="password" placeholder="••••••••">
+        <a class="forgot-link" id="forgot-password-link">Forgot Password?</a>
       </div>
 
       <button type="submit" class="btn-submit" id="btn-text">Sign In</button>
     </form>
 
-    <p class="auth-toggle">
+    <div id="oauth-section">
+      <div class="divider"><span>OR</span></div>
+
+      <div class="oauth-container">
+        <button class="btn-oauth" id="google-login-btn">
+          <svg class="oauth-icon" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
+        <button class="btn-oauth" id="github-login-btn">
+          <svg class="oauth-icon" viewBox="0 0 24 24">
+            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+          </svg>
+          Continue with GitHub
+        </button>
+      </div>
+    </div>
+
+    <p class="auth-toggle" id="toggle-p">
       <span id="toggle-msg">Don't have an account?</span> 
       <span id="toggle-link">Sign Up</span>
     </p>
   </div>
 
   <script>
-    // Supabase client configuration
     const SUPABASE_CONFIG = {
       url: 'https://fkhnlneamhfqsrmhegbx.supabase.co',
       anonKey: 'sb_publishable_AfJvihG0flTKvIQichC2EQ_lV5nBbks'
     };
 
     const supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-    let isSignUp = false;
-
-    // Check if user is already logged in
-    async function checkUser() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        window.location.replace('app.html');
-      }
-    }
-    checkUser();
+    let viewMode = 'signin'; // 'signin', 'signup', 'forgot', 'reset'
 
     // UI elements
     const form = document.getElementById('login-form');
     const title = document.getElementById('title');
     const subtitle = document.getElementById('subtitle');
     const btnText = document.getElementById('btn-text');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const emailGroup = document.getElementById('email-group');
+    const passwordGroup = document.getElementById('password-group');
+    const forgotLink = document.getElementById('forgot-password-link');
+    const oauthSection = document.getElementById('oauth-section');
+    const toggleP = document.getElementById('toggle-p');
     const toggleMsg = document.getElementById('toggle-msg');
     const toggleLink = document.getElementById('toggle-link');
     const errorBox = document.getElementById('error-box');
     const successBox = document.getElementById('success-box');
 
-    // Switch between Sign In and Sign Up
-    toggleLink.addEventListener('click', () => {
-      isSignUp = !isSignUp;
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    // Check if session expired redirect
+    if (urlParams.get('session_expired') === 'true') {
+      errorBox.textContent = 'Your free 10-minute session has ended. Sign in to unlock unlimited access.';
+      errorBox.style.display = 'block';
+    }
+
+    // Check if password recovery redirect
+    const isRecovery = urlParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
+    if (isRecovery) {
+      setMode('reset');
+    } else {
+      // Check if user is already logged in
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          window.location.replace('app.html');
+        }
+      });
+    }
+
+    function setMode(mode) {
+      viewMode = mode;
       errorBox.style.display = 'none';
       successBox.style.display = 'none';
       form.reset();
 
-      if (isSignUp) {
-        title.textContent = 'Create Account';
-        subtitle.textContent = 'Get started with Life Synth and unlock premium controls.';
-        btnText.textContent = 'Sign Up';
-        toggleMsg.textContent = 'Already have an account?';
-        toggleLink.textContent = 'Sign In';
-      } else {
+      if (mode === 'signin') {
         title.textContent = 'Sign In';
         subtitle.textContent = 'Access your premium visualizer and composition dashboard.';
         btnText.textContent = 'Sign In';
+        emailGroup.style.display = 'flex';
+        passwordGroup.style.display = 'flex';
+        passwordInput.required = true;
+        oauthSection.style.display = 'block';
+        toggleP.style.display = 'block';
         toggleMsg.textContent = "Don't have an account?";
         toggleLink.textContent = 'Sign Up';
+      } else if (mode === 'signup') {
+        title.textContent = 'Create Account';
+        subtitle.textContent = 'Get started with Life Synth and unlock premium controls.';
+        btnText.textContent = 'Sign Up';
+        emailGroup.style.display = 'flex';
+        passwordGroup.style.display = 'flex';
+        passwordInput.required = true;
+        oauthSection.style.display = 'block';
+        toggleP.style.display = 'block';
+        toggleMsg.textContent = 'Already have an account?';
+        toggleLink.textContent = 'Sign In';
+      } else if (mode === 'forgot') {
+        title.textContent = 'Reset Password';
+        subtitle.textContent = 'Enter your email to receive a password reset link.';
+        btnText.textContent = 'Send Reset Link';
+        emailGroup.style.display = 'flex';
+        passwordGroup.style.display = 'none';
+        passwordInput.required = false;
+        oauthSection.style.display = 'none';
+        toggleP.style.display = 'block';
+        toggleMsg.textContent = 'Remember your password?';
+        toggleLink.textContent = 'Sign In';
+      } else if (mode === 'reset') {
+        title.textContent = 'Set New Password';
+        subtitle.textContent = 'Enter a new secure password for your account.';
+        btnText.textContent = 'Update Password';
+        emailGroup.style.display = 'none';
+        passwordGroup.style.display = 'flex';
+        passwordInput.required = true;
+        passwordInput.placeholder = 'Enter new password';
+        oauthSection.style.display = 'none';
+        toggleP.style.display = 'none';
+        forgotLink.style.display = 'none';
+      }
+    }
+
+    // Forgot password link click
+    forgotLink.addEventListener('click', () => {
+      setMode('forgot');
+    });
+
+    // Toggle Sign In / Sign Up / Forgot mode link
+    toggleLink.addEventListener('click', () => {
+      if (viewMode === 'signin') {
+        setMode('signup');
+      } else {
+        setMode('signin');
       }
     });
 
@@ -330,34 +484,73 @@
       errorBox.style.display = 'none';
       successBox.style.display = 'none';
 
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
 
       btnText.disabled = true;
-      btnText.textContent = isSignUp ? 'Signing Up...' : 'Signing In...';
+      btnText.textContent = 'Processing...';
 
       try {
-        if (isSignUp) {
-          const { data, error } = await supabase.auth.signUp({ email, password });
+        if (viewMode === 'signup') {
+          const { error } = await supabase.auth.signUp({ email, password });
           if (error) throw error;
           
-          successBox.textContent = 'Signup successful! Please check your email for the verification link.';
+          successBox.textContent = 'Registration successful! Check your email for verification link.';
           successBox.style.display = 'block';
           form.reset();
-        } else {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        } else if (viewMode === 'signin') {
+          const { error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) throw error;
           
           window.location.replace('app.html');
+        } else if (viewMode === 'forgot') {
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + '/login.html?type=recovery'
+          });
+          if (error) throw error;
+
+          successBox.textContent = 'Password reset link sent to your email!';
+          successBox.style.display = 'block';
+          form.reset();
+        } else if (viewMode === 'reset') {
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) throw error;
+
+          successBox.textContent = 'Password updated successfully! Redirecting you to sign in...';
+          successBox.style.display = 'block';
+          
+          setTimeout(() => {
+            setMode('signin');
+          }, 3000);
         }
       } catch (err) {
-        errorBox.textContent = err.message || 'An error occurred during authentication.';
+        errorBox.textContent = err.message || 'An error occurred.';
         errorBox.style.display = 'block';
       } finally {
         btnText.disabled = false;
-        btnText.textContent = isSignUp ? 'Sign Up' : 'Sign In';
+        btnText.textContent = viewMode === 'signin' ? 'Sign In' : (viewMode === 'signup' ? 'Sign Up' : (viewMode === 'forgot' ? 'Send Reset Link' : 'Update Password'));
       }
     });
+
+    // OAuth Login Handlers
+    document.getElementById('google-login-btn').addEventListener('click', () => signInWithOAuth('google'));
+    document.getElementById('github-login-btn').addEventListener('click', () => signInWithOAuth('github'));
+
+    async function signInWithOAuth(provider) {
+      errorBox.style.display = 'none';
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: provider,
+          options: {
+            redirectTo: window.location.origin + '/app.html'
+          }
+        });
+        if (error) throw error;
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+      }
+    }
   </script>
 </body>
 </html>

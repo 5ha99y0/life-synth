@@ -443,6 +443,33 @@
       border-color: var(--accent-1);
       box-shadow: 0 0 10px rgba(124, 91, 245, 0.2);
     }
+    .theme-selector-container {
+      margin-left: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      pointer-events: auto;
+    }
+    .theme-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.3s ease;
+    }
+    .theme-select:hover, .theme-select:focus {
+      border-color: var(--accent-1);
+    }
+    .theme-select option {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
     .user-email {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.65rem;
@@ -820,23 +847,6 @@
     </div>
   </div>
 
-  <!-- Auth Modal -->
-  <div id="auth-modal" class="modal">
-    <div class="modal-content">
-      <span class="close-modal" id="close-auth-modal">&times;</span>
-      <h3 id="auth-modal-title">Sign In</h3>
-      <form id="auth-form">
-        <input type="email" id="auth-email" placeholder="Email" required />
-        <input type="password" id="auth-password" placeholder="Password" required />
-        <button type="submit" id="auth-submit-btn">Sign In</button>
-      </form>
-      <div id="auth-error" class="auth-error" style="display: none;"></div>
-      <p class="auth-toggle-text">
-        Don't have an account? <span id="toggle-auth-mode" style="cursor:pointer; text-decoration:underline;">Sign Up</span>
-      </p>
-    </div>
-  </div>
-
   <!-- Invisible typing capture -->
   <textarea id="type-capture" aria-label="Type anything to create music"></textarea>
 
@@ -844,6 +854,15 @@
   <div id="hud">
     <div class="top-bar">
       <div class="logo">Life<span>Synth</span></div>
+      <div class="theme-selector-container">
+        <select id="theme-select" class="theme-select">
+          <option value="wave">Wave</option>
+          <option value="ring">Ring 🔒</option>
+          <option value="particles">Particles 🔒</option>
+          <option value="bars">Bars 🔒</option>
+          <option value="matrix">Matrix 🔒</option>
+        </select>
+      </div>
       <div class="time-display">
         <div id="clock"></div>
         <div id="session-time">00:00</div>
@@ -917,6 +936,20 @@
 
     let currentMood = MOODS.calm;
     let currentScale = SCALES.ambient;
+
+    // PWA Offline Preset State & Save
+    let currentTheme = localStorage.getItem('lifesynth_theme') || 'wave';
+
+    // Particle structures for themes
+    const PWA_PARTICLES = [];
+    for (let i = 0; i < 80; i++) {
+      PWA_PARTICLES.push({
+        angle: Math.random() * Math.PI * 2,
+        speed: 0.005 + Math.random() * 0.015,
+        radius: 80 + Math.random() * 220,
+        size: 1 + Math.random() * 2.5
+      });
+    }
 
     function initAudio() {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1353,45 +1386,121 @@
       ctx.fillStyle = '#06060e';
       ctx.fillRect(0, 0, w, h);
 
-      // Central waveform
-      ctx.globalAlpha = 0.4 + energy * 0.3;
-      ctx.strokeStyle = currentMood.color;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      const centerY = h * 0.5;
-      const waveWidth = w * 0.6;
-      const startX = w * 0.2;
-      for (let i = 0; i <= 100; i++) {
-        const x = startX + (i / 100) * waveWidth;
-        const t = Date.now() / 1000;
-        const amp = 20 + energy * 80 + velocity * 40;
-        const freq1 = 0.02 + energy * 0.03;
-        const freq2 = 0.05 + chaos * 0.04;
-        const y = centerY +
-          Math.sin(i * freq1 * Math.PI + t * 2) * amp * 0.6 +
-          Math.sin(i * freq2 * Math.PI + t * 3.7) * amp * 0.3 +
-          Math.sin(i * 0.1 + t * 1.3) * amp * 0.1;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
+      // Render theme-specific visuals
+      if (currentTheme === 'wave') {
+        // Central waveform
+        ctx.globalAlpha = 0.4 + energy * 0.3;
+        ctx.strokeStyle = currentMood.color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const centerY = h * 0.5;
+        const waveWidth = w * 0.6;
+        const startX = w * 0.2;
+        for (let i = 0; i <= 100; i++) {
+          const x = startX + (i / 100) * waveWidth;
+          const t = Date.now() / 1000;
+          const amp = 20 + energy * 80 + velocity * 40;
+          const freq1 = 0.02 + energy * 0.03;
+          const freq2 = 0.05 + chaos * 0.04;
+          const y = centerY +
+            Math.sin(i * freq1 * Math.PI + t * 2) * amp * 0.6 +
+            Math.sin(i * freq2 * Math.PI + t * 3.7) * amp * 0.3 +
+            Math.sin(i * 0.1 + t * 1.3) * amp * 0.1;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
 
-      // Second wave (offset)
-      ctx.globalAlpha = 0.15 + energy * 0.1;
-      ctx.strokeStyle = currentMood.color;
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      for (let i = 0; i <= 100; i++) {
-        const x = startX + (i / 100) * waveWidth;
-        const t = Date.now() / 1000;
-        const amp = 15 + energy * 50;
-        const y = centerY +
-          Math.cos(i * 0.03 * Math.PI + t * 1.5) * amp * 0.7 +
-          Math.sin(i * 0.07 * Math.PI + t * 2.8) * amp * 0.3;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        // Second wave (offset)
+        ctx.globalAlpha = 0.15 + energy * 0.1;
+        ctx.strokeStyle = currentMood.color;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        for (let i = 0; i <= 100; i++) {
+          const x = startX + (i / 100) * waveWidth;
+          const t = Date.now() / 1000;
+          const amp = 15 + energy * 50;
+          const y = centerY +
+            Math.cos(i * 0.03 * Math.PI + t * 1.5) * amp * 0.7 +
+            Math.sin(i * 0.07 * Math.PI + t * 2.8) * amp * 0.3;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      } else if (currentTheme === 'ring') {
+        // Circular pulsing ring
+        const centerX = w * 0.5;
+        const centerY = h * 0.5;
+        const baseRadius = Math.min(w, h) * 0.18 + energy * 60;
+        ctx.strokeStyle = currentMood.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i <= 100; i++) {
+          const angle = (i / 100) * Math.PI * 2;
+          const t = Date.now() / 1000;
+          const offset = Math.sin(i * 0.15 + t * 4) * (15 + velocity * 25 + chaos * 15);
+          const r = baseRadius + offset;
+          const x = centerX + Math.cos(angle) * r;
+          const y = centerY + Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      } else if (currentTheme === 'particles') {
+        // Orbiting particles reacting to behavior
+        const centerX = w * 0.5;
+        const centerY = h * 0.5;
+        PWA_PARTICLES.forEach(p => {
+          p.angle += p.speed * (1 + energy * 2);
+          const r = p.radius + Math.sin(Date.now() / 600 + p.radius) * (15 + velocity * 35);
+          const x = centerX + Math.cos(p.angle) * r;
+          const y = centerY + Math.sin(p.angle) * r;
+          ctx.fillStyle = currentMood.color;
+          ctx.beginPath();
+          ctx.arc(x, y, p.size * (1.2 + energy * 1.5), 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else if (currentTheme === 'bars') {
+        // Spectrum bars rising from bottom
+        const barCount = 50;
+        const barWidth = w / barCount;
+        ctx.fillStyle = currentMood.color;
+        for (let i = 0; i < barCount; i++) {
+          const t = Date.now() / 250;
+          const height = (15 + Math.sin(i * 0.4 + t) * 45) * (1 + energy * 1.8 + velocity * 0.6);
+          const x = i * barWidth;
+          const y = h - height;
+          ctx.globalAlpha = 0.35 + (i % 3) * 0.1;
+          ctx.fillRect(x + 2, y, barWidth - 4, height);
+        }
+      } else if (currentTheme === 'matrix') {
+        // Digital neon rain
+        if (!window.matrixCols) {
+          window.matrixCols = [];
+          const count = Math.floor(w / 20);
+          for (let i = 0; i < count; i++) {
+            window.matrixCols.push({
+              x: i * 20,
+              y: Math.random() * -h,
+              speed: 1.5 + Math.random() * 3.5,
+              len: 6 + Math.floor(Math.random() * 12)
+            });
+          }
+        }
+        ctx.fillStyle = currentMood.color;
+        window.matrixCols.forEach(col => {
+          col.y += col.speed * (1 + energy * 1.5);
+          if (col.y > h) {
+            col.y = -120;
+            col.speed = 1.5 + Math.random() * 3.5;
+          }
+          for (let j = 0; j < col.len; j++) {
+            ctx.globalAlpha = (col.len - j) / col.len * 0.4;
+            ctx.fillRect(col.x, col.y - (j * 14), 2, 10);
+          }
+        });
       }
-      ctx.stroke();
 
       // Mouse trail particles
       if (isRunning && mouseSpeed > 3) {
@@ -1598,6 +1707,28 @@
         document.getElementById('export-btn').classList.remove('visible');
         installBtn.style.display = 'none';
       }
+
+      updateThemeSelectorUI();
+    }
+
+    function updateThemeSelectorUI() {
+      const select = document.getElementById('theme-select');
+      if (!select) return;
+      select.value = currentTheme;
+      
+      // Enable/disable locks based on premium status
+      const options = select.options;
+      for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        if (opt.value !== 'wave') {
+          if (isPremium) {
+            opt.textContent = opt.value.charAt(0).toUpperCase() + opt.value.slice(1);
+            opt.disabled = false;
+          } else {
+            opt.textContent = opt.value.charAt(0).toUpperCase() + opt.value.slice(1) + ' 🔒';
+          }
+        }
+      }
     }
 
     function startSessionTimer() {
@@ -1639,8 +1770,21 @@
       if (masterGain) {
         masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
       }
-      // Show paywall
-      setTimeout(() => {
+      
+      // Auto-redirect to login if not logged in
+      setTimeout(async () => {
+        let loggedIn = false;
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) loggedIn = true;
+        }
+        
+        if (!loggedIn) {
+          window.location.href = 'login.html?session_expired=true';
+          return;
+        }
+
+        // Show paywall modal for logged in free users
         const paywall = document.getElementById('paywall');
         paywall.style.display = 'flex';
         requestAnimationFrame(() => {
@@ -1843,11 +1987,6 @@
       requestAnimationFrame(() => authModal.classList.add('show'));
     }
 
-    function closeAuthModal() {
-      authModal.classList.remove('show');
-      setTimeout(() => authModal.style.display = 'none', 300);
-    }
-
     authBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       if (authBtn.textContent === 'Logout') {
@@ -1855,61 +1994,26 @@
           await supabase.auth.signOut();
         }
       } else {
-        openAuthModal();
+        window.location.href = 'login.html';
       }
     });
 
-    closeAuthModalBtn.addEventListener('click', closeAuthModal);
     document.getElementById('paywall-signin-link')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      openAuthModal();
+      window.location.href = 'login.html';
     });
 
-    toggleAuthModeSpan.addEventListener('click', () => {
-      const title = document.getElementById('auth-modal-title');
-      const submitBtn = document.getElementById('auth-submit-btn');
-      if (submitBtn.textContent === 'Sign In') {
-        title.textContent = 'Sign Up';
-        submitBtn.textContent = 'Sign Up';
-        toggleAuthModeSpan.textContent = 'Sign In';
-        document.querySelector('.auth-toggle-text').childNodes[0].textContent = 'Already have an account? ';
-      } else {
-        title.textContent = 'Sign In';
-        submitBtn.textContent = 'Sign In';
-        toggleAuthModeSpan.textContent = 'Sign Up';
-        document.querySelector('.auth-toggle-text').childNodes[0].textContent = "Don't have an account? ";
-      }
-    });
-
-    authForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('auth-email').value;
-      const password = document.getElementById('auth-password').value;
-      const submitBtn = document.getElementById('auth-submit-btn');
-      const isSignUp = submitBtn.textContent === 'Sign Up';
-      authError.style.display = 'none';
-
-      if (!supabase) {
-        authError.textContent = 'Authentication service is currently unavailable.';
-        authError.style.display = 'block';
+    // Theme selector change listener
+    document.getElementById('theme-select').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val !== 'wave' && !isPremium) {
+        e.target.value = 'wave';
+        // Trigger paywall directly
+        endFreeSession();
         return;
       }
-
-      try {
-        if (isSignUp) {
-          const { data, error } = await supabase.auth.signUp({ email, password });
-          if (error) throw error;
-          alert('Registration successful! Please check your email for the confirmation link.');
-          closeAuthModal();
-        } else {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-          closeAuthModal();
-        }
-      } catch (err) {
-        authError.textContent = err.message;
-        authError.style.display = 'block';
-      }
+      currentTheme = val;
+      localStorage.setItem('lifesynth_theme', val);
     });
 
     // ─── SUPABASE AUTH STATE LISTENER ───
