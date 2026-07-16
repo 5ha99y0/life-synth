@@ -536,7 +536,7 @@
           const { error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) throw error;
           
-          window.location.replace('app.html');
+          await handlePostAuthRedirect();
         } else if (viewMode === 'forgot') {
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: window.location.origin + '/login.html?type=recovery'
@@ -566,6 +566,30 @@
       }
     });
 
+    async function handlePostAuthRedirect() {
+      if (!supabase) {
+        window.location.replace('app.html');
+        return;
+      }
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+        
+        if (user && urlParams.get('go_premium') === 'true') {
+          let checkoutUrl = 'https://buy.stripe.com/fZu3cocXU7ziacU35j1sQ00';
+          const urlObj = new URL(checkoutUrl);
+          urlObj.searchParams.set('client_reference_id', user.id);
+          urlObj.searchParams.set('prefilled_email', user.email);
+          window.location.replace(urlObj.toString());
+        } else {
+          window.location.replace('app.html');
+        }
+      } catch (e) {
+        console.error("Redirect logic error:", e);
+        window.location.replace('app.html');
+      }
+    }
+
     // OAuth Login Handlers
     document.getElementById('google-login-btn').addEventListener('click', () => {
       if (supabase) signInWithOAuth('google');
@@ -577,10 +601,15 @@
     async function signInWithOAuth(provider) {
       errorBox.style.display = 'none';
       try {
+        let redirectUrl = window.location.origin + '/app.html';
+        if (urlParams.get('go_premium') === 'true') {
+          redirectUrl += '?go_premium=true';
+        }
+        
         const { error } = await supabase.auth.signInWithOAuth({
           provider: provider,
           options: {
-            redirectTo: window.location.origin + '/app.html'
+            redirectTo: redirectUrl
           }
         });
         if (error) throw error;

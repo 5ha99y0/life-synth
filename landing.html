@@ -1266,5 +1266,45 @@
       });
     })();
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_CONFIG = {
+      url: 'https://fkhnlneamhfqsrmhegbx.supabase.co',
+      anonKey: 'sb_publishable_AfJvihG0flTKvIQichC2EQ_lV5nBbks'
+    };
+
+    let supabase = null;
+    try {
+      if (typeof window.supabase !== 'undefined') {
+        supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+      }
+    } catch (e) {
+      console.error("Supabase load error:", e);
+    }
+
+    const premiumBtn = document.getElementById('premium-checkout');
+    if (premiumBtn) {
+      premiumBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        let checkoutUrl = 'https://buy.stripe.com/fZu3cocXU7ziacU35j1sQ00';
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          const user = session?.user;
+          if (user) {
+            // Logged in: go straight to Stripe checkout with user ID
+            const urlObj = new URL(checkoutUrl);
+            urlObj.searchParams.set('client_reference_id', user.id);
+            urlObj.searchParams.set('prefilled_email', user.email);
+            window.location.href = urlObj.toString();
+            return;
+          }
+        }
+        
+        // Not logged in: go to login page with go_premium flag
+        window.location.href = 'login.html?go_premium=true';
+      });
+    }
+  </script>
 </body>
 </html>
