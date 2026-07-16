@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Log in to Life Synth to access premium ambient music generation, offline execution, and custom sessions.">
+  <title>Life Synth — Account Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%237c5bf5'/><stop offset='100%25' stop-color='%23f55b9a'/></linearGradient></defs><circle cx='50' cy='50' r='45' fill='url(%23g)'/><path d='M30 65 Q40 30 50 55 Q60 30 70 65' stroke='white' stroke-width='4' fill='none'/></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #06060e;
+      --surface: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.06);
+      --text: #e8e6f0;
+      --text-dim: rgba(232, 230, 240, 0.5);
+      --purple: #7c5bf5;
+      --pink: #f55b9a;
+      --green: #5bf5c8;
+      --glow-purple: rgba(124, 91, 245, 0.25);
+      --glow-pink: rgba(245, 91, 154, 0.25);
+      --font: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient background glows */
+    .glow-1 {
+      position: absolute;
+      top: 10%; left: 10%;
+      width: 40vw; height: 40vw;
+      background: radial-gradient(circle, var(--glow-purple) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-2 {
+      position: absolute;
+      bottom: 10%; right: 10%;
+      width: 45vw; height: 45vw;
+      background: radial-gradient(circle, var(--glow-pink) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: absolute;
+      top: 2rem;
+      left: 0;
+      width: 100%;
+      padding: 0 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      box-shadow: 0 0 15px rgba(124, 91, 245, 0.4);
+    }
+
+    .nav-back {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color 0.3s ease;
+    }
+
+    .nav-back:hover {
+      color: var(--text);
+    }
+
+    .login-container {
+      width: 90%;
+      max-width: 420px;
+      background: rgba(12, 12, 26, 0.7);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      padding: 3rem 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 40px rgba(124, 91, 245, 0.05);
+      z-index: 1;
+      position: relative;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #fff 30%, var(--text-dim));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+    }
+
+    input {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      padding: 0.9rem 1rem;
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      border-color: var(--purple);
+      background: rgba(255, 255, 255, 0.04);
+      box-shadow: 0 0 10px rgba(124, 91, 245, 0.2);
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      border: none;
+      color: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 0.5rem;
+      box-shadow: 0 4px 15px rgba(124, 91, 245, 0.3);
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(124, 91, 245, 0.45);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .auth-toggle {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .auth-toggle span {
+      color: var(--purple);
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    .auth-toggle span:hover {
+      color: var(--pink);
+    }
+
+    .error-msg {
+      background: rgba(245, 91, 154, 0.1);
+      border: 1px solid var(--pink);
+      color: #f57ba2;
+      padding: 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      text-align: center;
+      display: none;
+    }
+
+    .success-msg {
+      background: rgba(91, 245, 200, 0.1);
+      border: 1px solid var(--green);
+      color: #7bf5d1;
+      padding: 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      text-align: center;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-1"></div>
+  <div class="glow-2"></div>
+
+  <header>
+    <a href="landing.html" class="logo">
+      <div class="logo-icon"></div>
+      Life Synth
+    </a>
+    <a href="landing.html" class="nav-back">← Back to Site</a>
+  </header>
+
+  <div class="login-container">
+    <h1 id="title">Sign In</h1>
+    <p class="subtitle" id="subtitle">Access your premium visualizer and composition dashboard.</p>
+
+    <div id="error-box" class="error-msg"></div>
+    <div id="success-box" class="success-msg"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" required>
+      </div>
+
+      <button type="submit" class="btn-submit" id="btn-text">Sign In</button>
+    </form>
+
+    <p class="auth-toggle">
+      <span id="toggle-msg">Don't have an account?</span> 
+      <span id="toggle-link">Sign Up</span>
+    </p>
+  </div>
+
+  <script>
+    // Supabase client configuration
+    const SUPABASE_CONFIG = {
+      url: 'https://fkhnlneamhfqsrmhegbx.supabase.co',
+      anonKey: 'sb_publishable_AfJvihG0flTKvIQichC2EQ_lV5nBbks'
+    };
+
+    const supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    let isSignUp = false;
+
+    // Check if user is already logged in
+    async function checkUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        window.location.replace('app.html');
+      }
+    }
+    checkUser();
+
+    // UI elements
+    const form = document.getElementById('login-form');
+    const title = document.getElementById('title');
+    const subtitle = document.getElementById('subtitle');
+    const btnText = document.getElementById('btn-text');
+    const toggleMsg = document.getElementById('toggle-msg');
+    const toggleLink = document.getElementById('toggle-link');
+    const errorBox = document.getElementById('error-box');
+    const successBox = document.getElementById('success-box');
+
+    // Switch between Sign In and Sign Up
+    toggleLink.addEventListener('click', () => {
+      isSignUp = !isSignUp;
+      errorBox.style.display = 'none';
+      successBox.style.display = 'none';
+      form.reset();
+
+      if (isSignUp) {
+        title.textContent = 'Create Account';
+        subtitle.textContent = 'Get started with Life Synth and unlock premium controls.';
+        btnText.textContent = 'Sign Up';
+        toggleMsg.textContent = 'Already have an account?';
+        toggleLink.textContent = 'Sign In';
+      } else {
+        title.textContent = 'Sign In';
+        subtitle.textContent = 'Access your premium visualizer and composition dashboard.';
+        btnText.textContent = 'Sign In';
+        toggleMsg.textContent = "Don't have an account?";
+        toggleLink.textContent = 'Sign Up';
+      }
+    });
+
+    // Form submission
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.style.display = 'none';
+      successBox.style.display = 'none';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      btnText.disabled = true;
+      btnText.textContent = isSignUp ? 'Signing Up...' : 'Signing In...';
+
+      try {
+        if (isSignUp) {
+          const { data, error } = await supabase.auth.signUp({ email, password });
+          if (error) throw error;
+          
+          successBox.textContent = 'Signup successful! Please check your email for the verification link.';
+          successBox.style.display = 'block';
+          form.reset();
+        } else {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          
+          window.location.replace('app.html');
+        }
+      } catch (err) {
+        errorBox.textContent = err.message || 'An error occurred during authentication.';
+        errorBox.style.display = 'block';
+      } finally {
+        btnText.disabled = false;
+        btnText.textContent = isSignUp ? 'Sign Up' : 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>
