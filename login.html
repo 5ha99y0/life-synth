@@ -40,6 +40,7 @@
       position: relative;
     }
 
+    /* Ambient background glows */
     .glow-1 {
       position: absolute;
       top: 10%; left: 10%;
@@ -68,6 +69,7 @@
       justify-content: space-between;
       align-items: center;
       z-index: 10;
+      pointer-events: none; /* Make header click-through, but enable clicks on its children */
     }
 
     .logo {
@@ -79,6 +81,9 @@
       font-weight: 600;
       font-size: 1.25rem;
       letter-spacing: -0.02em;
+      pointer-events: auto !important;
+      position: relative;
+      z-index: 20;
     }
 
     .logo-icon {
@@ -94,6 +99,9 @@
       text-decoration: none;
       font-size: 0.85rem;
       transition: color 0.3s ease;
+      pointer-events: auto !important;
+      position: relative;
+      z-index: 20;
     }
 
     .nav-back:hover {
@@ -112,6 +120,7 @@
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 40px rgba(124, 91, 245, 0.05);
       z-index: 1;
       position: relative;
+      pointer-events: auto;
     }
 
     h1 {
@@ -368,7 +377,16 @@
       anonKey: 'sb_publishable_AfJvihG0flTKvIQichC2EQ_lV5nBbks'
     };
 
-    const supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    // Initialize Supabase Client Safely
+    let supabase = null;
+    try {
+      if (typeof window.supabase !== 'undefined') {
+        supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+      }
+    } catch (e) {
+      console.error("Failed to initialize Supabase client:", e);
+    }
+
     let viewMode = 'signin'; // 'signin', 'signup', 'forgot', 'reset'
 
     // UI elements
@@ -388,6 +406,12 @@
     const errorBox = document.getElementById('error-box');
     const successBox = document.getElementById('success-box');
 
+    // Display error if Supabase SDK is blocked or failed to load
+    if (!supabase) {
+      errorBox.textContent = 'Authentication service is currently blocked or unavailable. Please check your internet connection or disable your adblocker.';
+      errorBox.style.display = 'block';
+    }
+
     // Parse URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -402,12 +426,14 @@
     const isRecovery = urlParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
     if (isRecovery) {
       setMode('reset');
-    } else {
+    } else if (supabase) {
       // Check if user is already logged in
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           window.location.replace('app.html');
         }
+      }).catch(err => {
+        console.error("Session fetch error:", err);
       });
     }
 
@@ -424,6 +450,7 @@
         emailGroup.style.display = 'flex';
         passwordGroup.style.display = 'flex';
         passwordInput.required = true;
+        forgotLink.style.display = 'inline-block';
         oauthSection.style.display = 'block';
         toggleP.style.display = 'block';
         toggleMsg.textContent = "Don't have an account?";
@@ -435,6 +462,7 @@
         emailGroup.style.display = 'flex';
         passwordGroup.style.display = 'flex';
         passwordInput.required = true;
+        forgotLink.style.display = 'none';
         oauthSection.style.display = 'block';
         toggleP.style.display = 'block';
         toggleMsg.textContent = 'Already have an account?';
@@ -483,6 +511,12 @@
       e.preventDefault();
       errorBox.style.display = 'none';
       successBox.style.display = 'none';
+
+      if (!supabase) {
+        errorBox.textContent = 'Authentication service is unavailable. Please check your network or adblocker.';
+        errorBox.style.display = 'block';
+        return;
+      }
 
       const email = emailInput.value.trim();
       const password = passwordInput.value;
@@ -533,8 +567,12 @@
     });
 
     // OAuth Login Handlers
-    document.getElementById('google-login-btn').addEventListener('click', () => signInWithOAuth('google'));
-    document.getElementById('github-login-btn').addEventListener('click', () => signInWithOAuth('github'));
+    document.getElementById('google-login-btn').addEventListener('click', () => {
+      if (supabase) signInWithOAuth('google');
+    });
+    document.getElementById('github-login-btn').addEventListener('click', () => {
+      if (supabase) signInWithOAuth('github');
+    });
 
     async function signInWithOAuth(provider) {
       errorBox.style.display = 'none';
